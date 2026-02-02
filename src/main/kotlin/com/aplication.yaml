@@ -1,0 +1,7 @@
+user:
+  maxFriends: 10 # 500
+  maxBanUsers: 20 # 500
+  enableProfilePicture: false
+  minLenUser: 5
+  minLenPassword: 5
+  enablePasswordDigitsValidation: true
