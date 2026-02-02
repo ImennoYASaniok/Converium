@@ -1,15 +1,27 @@
 package com.user
 
-// Модель пользователя
+data class User(
+    val id: Long = 0,
 
-data class User (
-    val id: Long,
     var login: String,
-    var avatar: String = "", // путь до картинки
-    var name: String = "",
-    var username: String = "",
-    var description: String = "", // описание
-    var contacts: MutableList<String> = mutableListOf(), // контакты, которые может добавить человек (2-3 контакта) (к примеру его почта, телефон)
-)
 
-// Также есть модели Friend, FriendRequest, BanFriend, которые использует id User
+    var password: String,
+
+    var email: String = "",
+
+    var profilePicture: String = "", // путь до картинки
+
+    var name: String = "",
+
+    var username: String = "",
+
+    var description: String = "", // описание
+
+    var contacts: MutableSet<String> = mutableSetOf(), // контакты
+
+    val friends: MutableSet<User> = mutableSetOf(),
+
+    val banUser: MutableSet<User> = mutableSetOf(),
+
+    val friendRequest: MutableSet<User> = mutableSetOf()
+)
