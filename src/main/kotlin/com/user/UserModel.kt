@@ -1,6 +1,6 @@
 package com.user
 
-data class User(
+data class UserModel(
     val id: Long = 0,
 
     var login: String,
@@ -19,9 +19,9 @@ data class User(
 
     var contacts: MutableSet<String> = mutableSetOf(), // контакты
 
-    val friends: MutableSet<User> = mutableSetOf(),
+    val friends: MutableSet<UserModel> = mutableSetOf(),
 
-    val banUser: MutableSet<User> = mutableSetOf(),
+    val banUser: MutableSet<UserModel> = mutableSetOf(),
 
-    val friendRequest: MutableSet<User> = mutableSetOf()
+    val friendRequest: MutableSet<UserModel> = mutableSetOf()
 )

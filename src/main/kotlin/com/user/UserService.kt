@@ -13,7 +13,7 @@ class UserService(
     private val logger: Logger = LoggerFactory.getLogger(UserService::class.java)
 
     interface LoggerStrings {
-        fun getUserInfo(user: User): String
+        fun getUserInfo(user: UserModel): String
         fun getWarnShortLogin(minLenUser: Int): String
         fun getWarnShortPassword(minLenPassword: Int): String
         fun getWarnMissDigitPassword(): String
@@ -22,7 +22,7 @@ class UserService(
         fun getWarnNotFoundUser(id: Long): String
     }
     val loggerStrings: LoggerStrings = object: LoggerStrings {
-        override fun getUserInfo(user: User): String = "id: ${user.id}, login: ${user.login}"
+        override fun getUserInfo(user: UserModel): String = "id: ${user.id}, login: ${user.login}"
         override fun getWarnShortLogin(minLenUser: Int): String = "Логин слишком короткий (минимум $minLenUser символов)"
         override fun getWarnShortPassword(minLenPassword: Int): String = "Пароль слишком короткий (минимум $minLenPassword символов)"
         override fun getWarnMissDigitPassword(): String = "Пароль должен содержать хотя бы одну цифру"
@@ -31,16 +31,16 @@ class UserService(
         override fun getWarnNotFoundUser(id: Long): String = "Пользователь id: $id не найден"
     }
 
-    private val usersStorage = ConcurrentHashMap<Long, User>()
+    private val usersStorage = ConcurrentHashMap<Long, UserModel>()
     private val idCounter = AtomicLong(1)
 
-    fun createUser(user: User): User? {
-        if (user.login.length < userProperties.minLenUser) {
+    fun createUser(user: UserModel): UserModel? {
+        if (user.login.length < 1) {
             logger.warn(loggerStrings.getWarnShortLogin(userProperties.minLenUser))
             return null
         }
 
-        if (user.password.length < userProperties.minLenPassword) {
+        if (user.password.length < 8) {
             logger.warn(loggerStrings.getWarnShortPassword(userProperties.minLenPassword))
             return null
         }
@@ -68,7 +68,7 @@ class UserService(
         return newUser
     }
 
-    fun getUserById(id: Long): User? {
+    fun getUserById(id: Long): UserModel? {
         val user = usersStorage[id]
         if (user == null) {
             logger.warn(loggerStrings.getWarnNotFoundUser(id))
@@ -79,12 +79,12 @@ class UserService(
         return user
     }
 
-    fun getAllUsers(): List<User> {
+    fun getAllUsers(): List<UserModel> {
         logger.info("Всего пользователей: ${usersStorage.size}")
         return usersStorage.values.toList()
     }
 
-    fun updateUser(id: Long, updatedUser: User): User? {
+    fun updateUser(id: Long, updatedUser: UserModel): UserModel? {
         val existingUser = getUserById(id) ?: return null
 
         if (updatedUser.login.length < userProperties.minLenUser) {
@@ -137,7 +137,7 @@ class UserService(
         return false
     }
 
-    fun searchUsersByUsername(username: String): List<User> {
+    fun searchUsersByUsername(username: String): List<UserModel> {
         val result = usersStorage.values.filter { it.username.contains(username, ignoreCase = true) }
         logger.info("Найдено ${result.size} пользователей по запросу '$username'")
         return result
