@@ -1,7 +1,6 @@
 package com.course
 
-import com.course.dto.CourseDto
-import com.course.dto.CreateCourseDto
+import com.course.dto.*
 import com.course.models.Course
 
 import org.springframework.http.HttpStatus
@@ -47,5 +46,16 @@ class CourseController(
         val userId = reqUserId ?: 1L // authentication.name.toLong()
         courseService.deleteCourse(courseId, userId)
         return ResponseEntity.noContent().build()
+    }
+
+    @PutMapping("/{courseId}")
+    fun updateCourse(
+        @PathVariable courseId: Long,
+        @RequestBody dto: UpdateCourseDto,
+        @RequestHeader("X-User-Id", required = false) userId: Long? = null
+    ): ResponseEntity<CourseDto> {
+        val requesterId = userId ?: 1L
+        val updatedCourse = courseService.updateCourse(courseId, dto, requesterId)
+        return ResponseEntity.ok(courseService.toDto(updatedCourse, requesterId))
     }
 }

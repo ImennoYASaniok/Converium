@@ -7,9 +7,11 @@ import com.course.repositories.CourseRepository
 import com.course.repositories.StepEdgeRepository
 import com.course.repositories.StepRepository
 import com.user.repositories.UserRepository
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.nio.file.AccessDeniedException
+import java.time.Instant
 
 @Service
 class CourseService(
@@ -19,15 +21,19 @@ class CourseService(
     private val stepEdgeRepository: StepEdgeRepository,
     private val userRepository: UserRepository,
 ) {
+    private val logger = LoggerFactory.getLogger(CourseService::class.java)
+
     @Transactional
     fun createCourse(dto: CreateCourseDto, ownerId: Long): Course {
-        require(dto.title.isNotBlank()) { "Title cannot be blank" }
-        require(dto.title.length <= 200) { "Title too long (max 200 chars)" }
+        logger.info("Создание курса '{}' пользователем {}...", dto.title, ownerId)
+
+        require(dto.title.isNotBlank()) { "Заголовок не может быть пустым" }
+        require(dto.title.length <= 200) { "Заголовок слишком длинный (муксимум - 200 символов)" }
         dto.description?.let {
-            require(it.length <= 5000) { "Description too long (max 5000 chars)" }
+            require(it.length <= 5000) { "Описание слишком длинное (максимум - 5000 символов)" }
         }
         val owner = userRepository.findById(ownerId)
-            .orElseThrow { IllegalArgumentException("User not found: $ownerId") }
+            .orElseThrow { IllegalArgumentException("Пользователь не найден: $ownerId") }
 
 
         val moderationStatus = when (dto.visibility) {
@@ -56,17 +62,17 @@ class CourseService(
         // TODO: если PUBLIC — отправить уведомление в Telegram на модерацию
 
 
-
+        logger.info("Курс создан, id={}", savedCourse.id)
         return savedCourse
     }
 
     @Transactional(readOnly = true)
     fun getCourseDto(courseId: Long, userId: Long): CourseDto {
         val course = courseRepository.findById(courseId)
-            .orElseThrow { IllegalArgumentException("Course not found: $courseId") }
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
 
-        if (!canView(course, userId)) {
-            throw RuntimeException("Access denied")
+        if (!canEdit(course, userId) and !canView(course, userId)) {
+            throw RuntimeException("Нет прав для просмотра курса")
         }
 
         return CourseDto(
@@ -82,18 +88,46 @@ class CourseService(
     }
 
     fun updateCourse(courseId: Long, dto: UpdateCourseDto, requesterId: Long): Course {
-        return TODO("Provide the return value")
+        logger.info("Обновление курса {} пользователем {}...", courseId, requesterId)
+
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
+
+        if (!canEdit(course, requesterId)) {
+            throw RuntimeException("Нет прав на изменение курса")
+        }
+
+        dto.title?.let { course.title = it }
+        dto.description?.let { course.description = it }
+
+        dto.visibility?.let { newVisibility ->
+            if (newVisibility == CourseVisibility.PUBLIC && course.visibility != CourseVisibility.PUBLIC) {
+                course.moderationStatus = ModerationStatus.PENDING
+                // TODO: отправить уведомление в Telegram на модерацию
+            }
+            if (course.visibility == CourseVisibility.PUBLIC && newVisibility != CourseVisibility.PUBLIC) {
+                course.moderationStatus = null
+            }
+            course.visibility = newVisibility
+        }
+        course.updatedAt = Instant.now()
+
+        logger.debug("Обновлённые данные: {}", dto)
+        return courseRepository.save(course)
     }
 
     @Transactional
     fun deleteCourse(courseId: Long, requesterId: Long) {
+        logger.warn("Удаление курса {} пользователем {}...", courseId, requesterId)
+
         val course = courseRepository.findById(courseId)
-            .orElseThrow { IllegalArgumentException("Course not found: $courseId") }
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
 
         if ((course.owner.id != requesterId) && (course.memberships.find { it.user.id == requesterId }?.ability != UserAbility.ADMIN)) {
-            throw RuntimeException("Access denied: cannot delete course")
+            throw RuntimeException("Нет прав на удаление курса")
         }
         courseRepository.delete(course)
+        logger.info("Курс {} удалён", courseId)
     }
 
     fun requestPublicModeration(courseId: Long, requesterId: Long) {// отправка на модерацию
@@ -101,7 +135,6 @@ class CourseService(
 
     fun updateModerationStatus(courseId: Long, status: ModerationStatus, moderatorId: Long) { // для админов
     }
-    // === Управление участниками (для CERTAIN_PEOPLE) ===
 
     fun addMember(courseId: Long, userId: Long, ability: UserAbility, granterId: Long): CourseMembership {
         return TODO("Provide the return value")
@@ -113,7 +146,6 @@ class CourseService(
         return TODO("Provide the return value")
     }
 
-    // === Управление графом курса ===
 
     fun addStep(courseId: Long, dto: CreateStepDto, requesterId: Long): Step {
         return TODO("Provide the return value")
@@ -134,16 +166,6 @@ class CourseService(
     fun getCourseGraph(courseId: Long, requesterId: Long): CourseGraphDto { // шаги + рёбра
         return TODO("Provide the return value")
     }
-
-    // === Навигация по курсу ===
-
-    fun getAvailableSteps(courseId: Long, userId: Long): List<Step> {// какие шаги доступны сейчас
-        return TODO("Provide the return value")
-    }
-
-//    fun getStepWithProgress(stepId: Long, userId: Long): StepWithProgressDto {
-//        return TODO("Provide the return value")
-//    }
 
 
     private fun canView(course: Course, userId: Long): Boolean {
@@ -177,4 +199,15 @@ class CourseService(
     private fun getUserAbility(course: Course, userId: Long): UserAbility? {
         return TODO("Provide the return value")
     }
+
+    fun toDto(course: Course, userId: Long): CourseDto = CourseDto(
+        id = course.id!!,
+        title = course.title,
+        description = course.description,
+        ownerId = course.owner.id!!,
+        visibility = course.visibility,
+        moderationStatus = course.moderationStatus,
+        canEdit = canEdit(course, userId),
+        memberCount = course.memberships.size
+    )
 }
