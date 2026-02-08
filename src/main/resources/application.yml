@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/studypals
-    username: postgres
-    password: postgres
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -18,3 +18,11 @@ logging:
     org.hibernate.SQL: DEBUG
   pattern:
     console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+user:
+  maxFriends: 500
+  maxBanUsers: 500
+  enableProfilePicture: false
+  minLenUser: 5
+  minLenPassword: 5
+  enablePasswordDigitsValidation: true

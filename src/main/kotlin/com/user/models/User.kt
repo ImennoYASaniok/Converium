@@ -21,23 +21,23 @@ data class User(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, unique = true, length = 40)
     var login: String,
 
     @Column(nullable = false)
     var password: String,
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true, length = 50)
     var email: String = "",
 
-    @Column(name = "profile_picture", length = 500)
+    @Column(name = "profile_picture")
     var profilePicture: String = "",
 
-    @Column(length = 100)
+    @Column(length = 30)
     var name: String = "",
 
-    @Column(length = 50, unique = true)
-    var username: String = "",
+    @Column(length = 30)
+    var surname: String = "",
 
     @Column(columnDefinition = "TEXT")
     var description: String = "",
