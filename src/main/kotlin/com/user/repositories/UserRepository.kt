@@ -10,7 +10,7 @@ interface UserRepository : JpaRepository<User, Long> {
     fun findByLogin(login: String): User?
 
     fun existsByLogin(login: String): Boolean
-    fun existsByUsername(username: String): Boolean
+    fun existsBySurname(username: String): Boolean
 
     @Query("""
         SELECT COUNT(*) > 0 FROM User u 

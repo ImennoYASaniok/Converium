@@ -1,8 +1,10 @@
 package com.course.dto
 
+import com.course.models.CourseEnrollment
 import com.course.models.CourseVisibility
 import com.course.models.ModerationStatus
 import com.course.models.StepType
+import java.time.Instant
 
 data class CreateCourseDto(
     val title: String,
@@ -24,8 +26,25 @@ data class CourseDto(
     val visibility: CourseVisibility,
     val moderationStatus: ModerationStatus?,
     val canEdit: Boolean, // для текущего пользователя
-    val memberCount: Int
+    val memberCount: Int,
+    val enrolledCount: Int
 )
+
+data class CourseEnrollmentDto(
+    val id: Long,
+    val courseId: Long,
+    val userId: Long,
+    val enrolledAt: Instant
+) {
+    companion object {
+        fun from(entity: CourseEnrollment) = CourseEnrollmentDto(
+            id = entity.id!!,
+            courseId = entity.course.id!!,
+            userId = entity.user.id!!,
+            enrolledAt = entity.enrolledAt
+        )
+    }
+}
 
 data class CreateStepDto(
     val name: String,

@@ -30,6 +30,10 @@ data class Course(
     @OneToMany(mappedBy = "course", cascade = [CascadeType.ALL], orphanRemoval = true)
     val memberships: MutableList<CourseMembership> = mutableListOf(),
 
+    // Люди, начавшие курс (для статистики)
+    @OneToMany(mappedBy = "course", cascade = [CascadeType.ALL], orphanRemoval = true)
+    val enrollments: MutableList<CourseEnrollment> = mutableListOf(),
+
     @OneToMany(mappedBy = "course", cascade = [CascadeType.ALL], orphanRemoval = true)
     val steps: MutableList<Step> = mutableListOf(),
 

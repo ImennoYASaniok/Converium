@@ -52,10 +52,23 @@ class CourseController(
     fun updateCourse(
         @PathVariable courseId: Long,
         @RequestBody dto: UpdateCourseDto,
-        @RequestHeader("X-User-Id", required = false) userId: Long? = null
+//        authentication: Authentication
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
     ): ResponseEntity<CourseDto> {
-        val requesterId = userId ?: 1L
-        val updatedCourse = courseService.updateCourse(courseId, dto, requesterId)
-        return ResponseEntity.ok(courseService.toDto(updatedCourse, requesterId))
+        val userId = reqUserId ?: 1L // authentication.name.toLong()
+        val updatedCourse = courseService.updateCourse(courseId, dto, userId)
+        return ResponseEntity.ok(courseService.toDto(updatedCourse, userId))
+    }
+
+    @PostMapping("/{courseId}/start")
+    fun startCourse(
+        @PathVariable courseId: Long,
+//        authentication: Authentication
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
+    ): ResponseEntity<CourseEnrollmentDto> {
+        val userId = reqUserId ?: 1L // authentication.name.toLong()
+        val enrollment = courseService.startCourse(courseId, userId)
+        return ResponseEntity.status(HttpStatus.CREATED).body(CourseEnrollmentDto.from(enrollment))
     }
 }
+

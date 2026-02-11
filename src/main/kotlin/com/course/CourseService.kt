@@ -2,6 +2,7 @@ package com.course
 
 import com.course.dto.*
 import com.course.models.*
+import com.course.repositories.CourseEnrollmentRepository
 import com.course.repositories.CourseMembershipRepository
 import com.course.repositories.CourseRepository
 import com.course.repositories.StepEdgeRepository
@@ -17,6 +18,7 @@ import java.time.Instant
 class CourseService(
     private val courseRepository: CourseRepository,
     private val courseMembershipRepository: CourseMembershipRepository,
+    private val courseEnrollmentRepository: CourseEnrollmentRepository,
     private val stepRepository: StepRepository,
     private val stepEdgeRepository: StepEdgeRepository,
     private val userRepository: UserRepository,
@@ -83,7 +85,8 @@ class CourseService(
             visibility = course.visibility,
             moderationStatus = course.moderationStatus,
             canEdit = canEdit(course, userId),
-            memberCount = course.memberships.size
+            memberCount = course.memberships.size,
+            enrolledCount = course.enrollments.size
         )
     }
 
@@ -128,6 +131,29 @@ class CourseService(
         }
         courseRepository.delete(course)
         logger.info("Курс {} удалён", courseId)
+    }
+
+    @Transactional
+    fun startCourse(courseId: Long, userId: Long): CourseEnrollment {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
+
+        if (!canView(course, userId)) {
+            throw RuntimeException("Нет прав для просмотра курса")
+        }
+
+        if (course.enrollments.any { it.user.id == userId }) {
+            throw IllegalStateException("Уже записан")
+        }
+
+        val user = userRepository.findById(userId).orElseThrow()
+
+        val enrollment = CourseEnrollment(
+            course = course,
+            user = user
+        )
+
+        return courseEnrollmentRepository.save(enrollment)
     }
 
     fun requestPublicModeration(courseId: Long, requesterId: Long) {// отправка на модерацию
@@ -208,6 +234,7 @@ class CourseService(
         visibility = course.visibility,
         moderationStatus = course.moderationStatus,
         canEdit = canEdit(course, userId),
-        memberCount = course.memberships.size
+        memberCount = course.memberships.size,
+        enrolledCount = course.enrollments.size
     )
 }
