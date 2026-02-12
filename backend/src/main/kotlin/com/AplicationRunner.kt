@@ -1,6 +1,6 @@
 package com
 
-import com.user.UserModel
+import com.user.models.User
 import com.user.UserProperties
 import com.user.UserService
 import org.slf4j.Logger
@@ -20,24 +20,24 @@ class ApplicationRunner(
 
         logger.info("\n--- 1) СОЗДАНИЕ ПОЛЬЗОВАТЕЛЕЙ ---")
         logger.info("Создание пользователя")
-        val user1 = UserModel(
+        val user1 = User(
             login = "prosto_saniok",
             password = "password123",
             email = "prosto_saniok@example.com",
             name = "Prosto",
-            username = "Saniok"
+            surname = "Saniok"
         )
         val createdUser1 = userService.createUser(user1)
 
         logger.info("Создание пользователя с коротким паролем")
-        val user2 = UserModel(
+        val user2 = User(
             login = "shortpass",
             password = "123",
             email = "short@example.com"
         )
         val createdUser2 = userService.createUser(user2)
 
-        val user3 = UserModel(
+        val user3 = User(
             login = "noname",
             password = "noname123",
             email = "no_name@example.com",
@@ -46,12 +46,12 @@ class ApplicationRunner(
         )
         val createdUser3 = userService.createUser(user3)
 
-        val user4 = UserModel(
+        val user4 = User(
             login = "prosto_saniok_dublicate",
             password = "password321",
             email = "prosto_saniok@example.com",
             name = "Prosto",
-            username = "Saniok"
+            surname = "Saniok"
         )
         val createdUser4 = userService.createUser(user4)
 
@@ -77,7 +77,7 @@ class ApplicationRunner(
                 name = "Saniok Updated",
                 email = "updated@example.com"
             )
-            val updateResult = userService.updateUser(createdUser1.id, updatedUser)
+            val updateResult = userService.updateUser(createdUser1.id!!, updatedUser)
         }
 
 

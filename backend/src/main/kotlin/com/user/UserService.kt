@@ -1,5 +1,6 @@
 package com.user
 
+import com.user.models.User
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -13,7 +14,7 @@ class UserService(
     private val logger: Logger = LoggerFactory.getLogger(UserService::class.java)
 
     interface LoggerStrings {
-        fun getUserInfo(user: UserModel): String
+        fun getUserInfo(user: User): String
         fun getWarnShortLogin(minLenUser: Int): String
         fun getWarnShortPassword(minLenPassword: Int): String
         fun getWarnMissDigitPassword(): String
@@ -22,7 +23,7 @@ class UserService(
         fun getWarnNotFoundUser(id: Long): String
     }
     val loggerStrings: LoggerStrings = object: LoggerStrings {
-        override fun getUserInfo(user: UserModel): String = "id: ${user.id}, login: ${user.login}"
+        override fun getUserInfo(user: User): String = "id: ${user.id}, login: ${user.login}"
         override fun getWarnShortLogin(minLenUser: Int): String = "Логин слишком короткий (минимум $minLenUser символов)"
         override fun getWarnShortPassword(minLenPassword: Int): String = "Пароль слишком короткий (минимум $minLenPassword символов)"
         override fun getWarnMissDigitPassword(): String = "Пароль должен содержать хотя бы одну цифру"
@@ -31,10 +32,10 @@ class UserService(
         override fun getWarnNotFoundUser(id: Long): String = "Пользователь id: $id не найден"
     }
 
-    private val usersStorage = ConcurrentHashMap<Long, UserModel>()
+    private val usersStorage = ConcurrentHashMap<Long, User>()
     private val idCounter = AtomicLong(1)
 
-    fun createUser(user: UserModel): UserModel? {
+    fun createUser(user: User): User? {
         if (user.login.length < 1) {
             logger.warn(loggerStrings.getWarnShortLogin(userProperties.minLenUser))
             return null
@@ -55,7 +56,7 @@ class UserService(
             return null
         }
 
-        if (user.banUser.size > userProperties.maxBanUsers) {
+        if (user.bannedUsers.size > userProperties.maxBanUsers) {
             logger.warn(loggerStrings.getWarnManyBanUsers(userProperties.maxBanUsers))
             return null
         }
@@ -68,7 +69,7 @@ class UserService(
         return newUser
     }
 
-    fun getUserById(id: Long): UserModel? {
+    fun getUserById(id: Long): User? {
         val user = usersStorage[id]
         if (user == null) {
             logger.warn(loggerStrings.getWarnNotFoundUser(id))
@@ -79,12 +80,12 @@ class UserService(
         return user
     }
 
-    fun getAllUsers(): List<UserModel> {
+    fun getAllUsers(): List<User> {
         logger.info("Всего пользователей: ${usersStorage.size}")
         return usersStorage.values.toList()
     }
 
-    fun updateUser(id: Long, updatedUser: UserModel): UserModel? {
+    fun updateUser(id: Long, updatedUser: User): User? {
         val existingUser = getUserById(id) ?: return null
 
         if (updatedUser.login.length < userProperties.minLenUser) {
@@ -107,7 +108,7 @@ class UserService(
             return null
         }
 
-        if (updatedUser.banUser.size > userProperties.maxBanUsers) {
+        if (updatedUser.bannedUsers.size > userProperties.maxBanUsers) {
             logger.warn(loggerStrings.getWarnManyBanUsers(userProperties.maxBanUsers))
             return null
         }
@@ -126,8 +127,8 @@ class UserService(
 
             usersStorage.values.forEach { user ->
                 user.friends.remove(removedUser)
-                user.banUser.remove(removedUser)
-                user.friendRequest.remove(removedUser)
+                user.bannedUsers.remove(removedUser)
+                user.friendRequests.remove(removedUser)
             }
 
             return true
@@ -137,8 +138,8 @@ class UserService(
         return false
     }
 
-    fun searchUsersByUsername(username: String): List<UserModel> {
-        val result = usersStorage.values.filter { it.username.contains(username, ignoreCase = true) }
+    fun searchUsersByUsername(username: String): List<User> {
+        val result = usersStorage.values.filter { it.surname.contains(username, ignoreCase = true) }
         logger.info("Найдено ${result.size} пользователей по запросу '$username'")
         return result
     }
