@@ -157,6 +157,7 @@ class CourseService(
     }
 
     fun requestPublicModeration(courseId: Long, requesterId: Long) {// отправка на модерацию
+
     }
 
     fun updateModerationStatus(courseId: Long, status: ModerationStatus, moderatorId: Long) { // для админов
