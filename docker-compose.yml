@@ -7,17 +7,20 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: studypals
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres_db
+      POSTGRES_PASSWORD: password
     ports:
-      - "5432:5432"
+      - "5431:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_2:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d studypals"]
+      test: ["CMD-SHELL", "pg_isready -U postgres_db -d studypals"]
       interval: 5s
       timeout: 5s
       retries: 5
+#    jpa:
+#      hibernate:
+#        ddl-auto: update
 
   app:
     build:
@@ -31,10 +34,11 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/studypals
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_USERNAME: postgres_db
+      SPRING_DATASOURCE_PASSWORD: password
     ports:
       - "8080:8080"
 
+
 volumes:
-  postgres_data:
+  postgres_data_2:

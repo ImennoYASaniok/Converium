@@ -1,8 +1,8 @@
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/studypals
-    username: postgres
-    password: postgres
+#spring:
+#  datasource:
+#    url: jdbc:postgresql://studypals_db:5432/studypals
+#    username: postgres_db
+#    password: password
 
 logging:
   level:

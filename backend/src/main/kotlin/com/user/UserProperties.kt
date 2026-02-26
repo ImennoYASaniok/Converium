@@ -6,10 +6,10 @@ import org.springframework.stereotype.Component
 @Component
 @ConfigurationProperties(prefix = "user")
 data class UserProperties (
-    var maxFriends: Int = 500,
-    var maxBanUsers: Int = 500,
-    var enableProfilePicture: Boolean = false,
-    var minLenPassword: Int = 5,
-    var minLenUser: Int = 5,
-    var enablePasswordDigitsValidation: Boolean = true
+    val maxFriends: Int = 500,
+    val maxBanUsers: Int = 500,
+    val enableProfilePicture: Boolean = false,
+    val minLenPassword: Int = 5,
+    val minLenUser: Int = 5,
+    val enablePasswordDigitsValidation: Boolean = true
 )
