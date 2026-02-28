@@ -22,6 +22,8 @@ docker-compose up -d --build
 
 ## Полезные команды
 
+### Создание и запуск
+
 Принудительное пересоздание контейнеров:
 ```bash
 docker-compose up --force-recreate
@@ -30,6 +32,11 @@ docker-compose up --force-recreate
 Запуск только приложения (без зависимостей):
 ```bash
 docker-compose up --no-deps app
+```
+
+Запуск только бд:
+```bash
+docker-compose up -d db
 ```
 
 ### Остановка и удаление контейнеров
