@@ -1,6 +1,6 @@
 # Этап сборки
 FROM gradle:7.6-jdk17 AS build
-COPY backend /home/gradle/src
+COPY . /home/gradle/src
 WORKDIR /home/gradle/src
 RUN gradle bootJar --no-daemon --info
 
