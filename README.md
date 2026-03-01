@@ -170,6 +170,6 @@ docker-compose ps
 
 **Попов Александр**: [github](https://github.com/ImennoYASaniok), [тг](https://t.me/ProstoSaniok), [почта](https://mail.yandex.ru/compose?to=Banlichelendsh@yandex.ru)
 
-**Новичихин Серафим**: [github](https://github.com/Serafim-Novichikhin), [тг](https://t.me/Serafim_Novichikhin), [почта]()
+**Новичихин Серафим**: [github](https://github.com/Serafim-Novichikhin), [тг](https://t.me/Serafim_Novichikhin)
 
 **Майя Запуниди**: [github](), [тг](), [почта]()
