@@ -30,11 +30,7 @@ class UserController(
 
     private fun getCurrentUserId(): Long? {
         val authentication = SecurityContextHolder.getContext().authentication
-        return if (authentication != null && authentication.isAuthenticated) {
-            (authentication.principal as? Long)
-        } else {
-            null
-        }
+        return authentication?.principal as? Long
     }
 
     @PostMapping("/register")

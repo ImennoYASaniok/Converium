@@ -10,7 +10,7 @@ import org.hibernate.annotations.OnDeleteAction
 class User(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    var id: Long? = null,
+    var id: Long = 0,
 
     @Column(nullable = false, unique = true, length = 40)
     var login: String,

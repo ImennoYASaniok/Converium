@@ -253,7 +253,7 @@ class UserService(
     }
 
     private fun buildUserDto(user: User, currentUserId: Long?): UserDto {
-        val userId = user.id!!
+        val userId = user.id
         val isCurrentUser = currentUserId == userId
         val isFriend = currentUserId != null && userRepository.areFriends(currentUserId, userId)
         val isBanned = currentUserId != null && userRepository.isBanned(currentUserId, user)

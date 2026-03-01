@@ -54,9 +54,9 @@ class TestUserRunner(
     private fun deleteTestUsers() {
         TEST_LOGINS.forEach { login ->
             userRepository.findByLogin(login).ifPresent { user ->
-                userRepository.deleteFriendsByUserId(user.id!!)
-                userRepository.deleteBansByUserId(user.id!!)
-                userRepository.deleteRequestsByUserId(user.id!!)
+                userRepository.deleteFriendsByUserId(user.id)
+                userRepository.deleteBansByUserId(user.id)
+                userRepository.deleteRequestsByUserId(user.id)
                 userRepository.delete(user)
                 log.info("Удалён старый тестовый пользователь с логином: $login")
             }

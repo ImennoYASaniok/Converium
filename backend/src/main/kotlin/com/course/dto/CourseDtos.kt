@@ -40,7 +40,7 @@ data class CourseEnrollmentDto(
         fun from(entity: CourseEnrollment) = CourseEnrollmentDto(
             id = entity.id!!,
             courseId = entity.course.id!!,
-            userId = entity.user.id!!,
+            userId = entity.user.id,
             enrolledAt = entity.enrolledAt
         )
     }

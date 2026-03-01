@@ -15,11 +15,11 @@ data class UserDto(
     val contacts: Set<String>,
     val friendCount: Int,
     val bannedCount: Int,
-    val canEdit: Boolean,
+    val canEdit: Boolean, // доступ на редактирование данных пользователя
     val isFriend: Boolean,
     val isBanned: Boolean,
-    val hasIncomingRequest: Boolean,
-    val hasOutgoingRequest: Boolean
+    val hasIncomingRequest: Boolean, // есть ли запросы в друзья от других пользователей
+    val hasOutgoingRequest: Boolean // есть ли отправленные запросы в друзья
 )
 
 data class CreateUserRequest(
