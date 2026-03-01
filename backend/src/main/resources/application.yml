@@ -1,12 +1,6 @@
-#spring:
-#  datasource:
-#    url: jdbc:postgresql://studypals_db:5432/studypals
-#    username: postgres_db
-#    password: password
-
 logging:
   level:
-    root: INFO
+    root: INFO # DEBUG
     com.course: DEBUG
     org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG

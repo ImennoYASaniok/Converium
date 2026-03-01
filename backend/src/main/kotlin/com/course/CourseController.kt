@@ -21,7 +21,7 @@ class CourseController(
 //        authentication: Authentication
         @RequestHeader("X-User-Id", required = false) userId: Long? = null
     ): ResponseEntity<Course> {
-        val ownerId = userId ?: 1L // authentication.name.toLong()
+        val ownerId = userId ?: 37L // 1L // authentication.name.toLong()
         val course = courseService.createCourse(dto, ownerId)
         return ResponseEntity.status(HttpStatus.CREATED).body(course)
     }

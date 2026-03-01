@@ -4,7 +4,7 @@ services:
   db:
     image: postgres:15
     container_name: studypals_db
-    restart: unless-stopped
+    restart: no # unless-stopped
     environment:
       POSTGRES_DB: studypals
       POSTGRES_USER: postgres_db
