@@ -1,25 +1,16 @@
 package com.user.models
 
-import jakarta.persistence.CollectionTable
-import jakarta.persistence.Column
-import jakarta.persistence.ElementCollection
-import jakarta.persistence.Entity
-import jakarta.persistence.FetchType
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.JoinTable
-import jakarta.persistence.ManyToMany
-import jakarta.persistence.Table
+import jakarta.persistence.*
 import java.time.Instant
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 
 @Entity
 @Table(name = "users")
-data class User(
+class User(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    var id: Long = 0,
 
     @Column(nullable = false, unique = true, length = 40)
     var login: String,
@@ -53,7 +44,17 @@ data class User(
         joinColumns = [JoinColumn(name = "user_id")],
         inverseJoinColumns = [JoinColumn(name = "friend_id")]
     )
+    @OnDelete(action = OnDeleteAction.CASCADE)
     val friends: MutableSet<User> = mutableSetOf(),
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "user_friends",
+        joinColumns = [JoinColumn(name = "friend_id")],
+        inverseJoinColumns = [JoinColumn(name = "user_id")]
+    )
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    protected val friendsInverse: MutableSet<User> = mutableSetOf(),
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -61,7 +62,17 @@ data class User(
         joinColumns = [JoinColumn(name = "user_id")],
         inverseJoinColumns = [JoinColumn(name = "banned_user_id")]
     )
+    @OnDelete(action = OnDeleteAction.CASCADE)
     val bannedUsers: MutableSet<User> = mutableSetOf(),
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "user_bans",
+        joinColumns = [JoinColumn(name = "banned_user_id")],
+        inverseJoinColumns = [JoinColumn(name = "user_id")]
+    )
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    protected val bannedUsersInverse: MutableSet<User> = mutableSetOf(),
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -69,8 +80,32 @@ data class User(
         joinColumns = [JoinColumn(name = "user_id")],
         inverseJoinColumns = [JoinColumn(name = "requester_id")]
     )
+    @OnDelete(action = OnDeleteAction.CASCADE)
     val friendRequests: MutableSet<User> = mutableSetOf(),
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "friend_requests",
+        joinColumns = [JoinColumn(name = "requester_id")],
+        inverseJoinColumns = [JoinColumn(name = "user_id")]
+    )
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    protected val friendRequestsInverse: MutableSet<User> = mutableSetOf(),
 
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now()
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is User) return false
+        return id != null && other.id != null && id == other.id
+    }
+
+    override fun hashCode(): Int {
+        return if (id != null) java.util.Objects.hash(id) else super.hashCode()
+    }
+
+    override fun toString(): String {
+        return "User(id=$id, login='$login', email='$email')"
+    }
+}
