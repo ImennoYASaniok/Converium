@@ -1,0 +1,289 @@
+// dbdiagram.io DSL для Converium
+// Основано на Spring Boot моделях и репозиториях
+
+// Пользователи
+Table users {
+  id bigint [pk, increment]
+  login varchar(40) [unique, not null]
+  password varchar(255) [not null]
+  email varchar(50) [unique, not null]      // основной email
+  profile_picture varchar(255) [default: ""]
+  name varchar(30) [default: ""]
+  surname varchar(30) [default: ""]
+  description text [default: ""]
+  created_at timestamp [not null, default: `now()`]
+}
+
+// Контакты пользователя (связь 1 ко многим)
+Table user_contacts {
+  user_id bigint [not null, ref: > users.id]
+  // например, "+7999999999", "@telegram_nick")
+  contact varchar(255) [not null]
+  indexes {
+    (user_id, contact) [unique]
+  }
+}
+
+// Друзья (many-to-many)
+Table user_friends {
+  user_id bigint [not null, ref: > users.id]
+  friend_id bigint [not null, ref: > users.id]
+  indexes {
+    (user_id, friend_id) [pk]
+  }
+}
+
+// Баны (many-to-many)
+Table user_bans {
+  user_id bigint [not null, ref: > users.id]
+  banned_user_id bigint [not null, ref: > users.id]
+  indexes {
+    (user_id, banned_user_id) [pk]
+  }
+}
+
+// Запросы в друзья (many-to-many)
+Table friend_requests {
+  user_id bigint [not null, ref: > users.id] // получатель
+  requester_id bigint [not null, ref: > users.id] // отправитель
+  indexes {
+    (user_id, requester_id) [pk]
+  }
+}
+
+// Курсы
+Table courses {
+  id bigint [pk, increment]
+  title varchar(200) [not null]
+  description text
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  owner_id bigint [not null, ref: > users.id]
+  visibility varchar(20) [not null, default: 'FRIENDS_ONLY'] // PUBLIC, FRIENDS_ONLY, CERTAIN_PEOPLE
+  moderation_status varchar(20) // PENDING, APPROVED, REJECTED (nullable)
+  comments_enabled boolean [not null, default: true] // разрешено ли писать комментарии участникам с READ-правами
+}
+
+// Записи на курс (прогресс)
+Table course_enrollments {
+  id bigint [pk, increment]
+  course_id bigint [not null, ref: > courses.id]
+  user_id bigint [not null, ref: > users.id]
+  enrolled_at timestamp [not null, default: `now()`]
+  indexes {
+    (course_id, user_id) [unique]
+  }
+}
+
+// Должность в курсе с правами доступа
+Table course_memberships {
+  id bigint [pk, increment]
+  course_id bigint [not null, ref: > courses.id]
+  user_id bigint [not null, ref: > users.id]
+  ability varchar(20) [not null, default: 'READ'] // READ, EDIT, ADMIN
+  granted_by bigint [ref: > users.id] // кто выдал права
+  indexes {
+    (course_id, user_id) [unique]
+  }
+}
+
+// Шаги курса
+Table steps {
+  id bigint [pk, increment]
+  name varchar(255) [not null]
+  content text
+  course_id bigint [not null, ref: > courses.id]
+  type varchar(20) [not null, default: 'THEORY'] // THEORY, TEST, PRACTICE
+}
+
+// Рёбра курса
+Table step_edges {
+  id bigint [pk, increment]
+  from_step_id bigint [not null, ref: > steps.id]
+  to_step_id bigint [not null, ref: > steps.id]
+  required_score int
+  course_id bigint [not null, ref: > courses.id] // для каскадного удаления всех рёбер курса
+  indexes {
+    (from_step_id, to_step_id) [unique]
+  }
+}
+
+// Приватный чаты курса только для редакторов
+Table private_chat_rooms {
+  id bigint [pk, increment]
+  course_id bigint [ref: > courses.id] // для чата курса (course_id не null, step_id null)
+  step_id bigint [ref: > steps.id] // для чата шага (step_id не null, course_id null)
+  name varchar(200) [not null]
+  created_at timestamp [not null, default: `now()`]
+  // Примечание: одна из ссылок (course_id или step_id) должна быть заполнена, но не обе.
+}
+
+// Участники приватных чатов
+Table private_chat_participants {
+  id bigint [pk, increment]
+  chat_room_id bigint [not null, ref: > private_chat_rooms.id]
+  user_id bigint [not null, ref: > users.id]
+  joined_at timestamp [not null, default: `now()`]
+  last_read_message_id bigint [ref: > private_chat_messages.id] // для отслеживания непрочитанных
+  indexes {
+    (chat_room_id, user_id) [unique] // пользователь может быть в чате только один раз
+  }
+}
+
+// Сообщения приватных чатов
+Table private_chat_messages {
+  id bigint [pk, increment]
+  chat_room_id bigint [not null, ref: > private_chat_rooms.id]
+  user_id bigint [not null, ref: > users.id]
+  content text [not null]
+  sent_at timestamp [not null, default: `now()`]
+  updated_at timestamp
+  reply_to_message_id bigint [ref: > private_chat_messages.id]
+  indexes {
+    (chat_room_id, sent_at)
+  }
+}
+
+// Комментарии к курсу или шагу (линейные, с поддержкой ответов)
+Table comments {
+  id bigint [pk, increment]
+  author_id bigint [not null, ref: > users.id]
+  course_id bigint [ref: > courses.id] // комментарий к курсу (если step_id null)
+  step_id bigint [ref: > steps.id] // комментарий к шагу (если course_id null)
+  // Примечание: одна из ссылок (course_id или step_id) должна быть заполнена (по аналогии с private_chat_rooms)
+  content text [not null]
+  created_at timestamp [not null, default: `now()`]
+  parent_comment_id bigint [ref: > comments.id] // для ответов (null = корневой комментарий)
+  indexes {
+    (course_id, created_at) // для быстрой загрузки комментариев курса
+    (step_id, created_at) // для быстрой загрузки комментариев шага
+  }
+}
+// Комментарии нельзя будет редактировать
+
+// Таблица для хранения состояния досок (типо как Miro)
+Table boards {
+  id bigint [pk, increment]
+  step_id bigint [unique, not null, ref: > steps.id] // связь с шагом (один-к-одному)
+  data json [not null] // JSON-структура со всеми элементами доски
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  version int [not null, default: 0] // для предотвращение конфликтов при совместном редактировании
+}
+// Для синхронизации в реальном времени используется WebSocket, но состояние сохраняется в БД периодически
+
+// Пример структуры JSON в поле data:
+// {
+//   "version": "1.0", // увеличивается при каждом сохранении, чтобы предотвратить конфликты при одновременном редактировании
+//   "elements": [
+//     {
+//       "id": "uuid-1",
+//       "type": "sticky_note",
+//       "x": 100,
+//       "y": 150,
+//       "width": 200,
+//       "height": 150,
+//       "text": "Заметка",
+//       "color": "#ffcc00",
+//       "author_id": 123
+//     },
+//     {
+//       "id": "uuid-2",
+//       "type": "shape",
+//       "shapeType": "rectangle",
+//       "x": 350,
+//       "y": 200,
+//       "width": 100,
+//       "height": 80,
+//       "fillColor": "#00aaff",
+//       "author_id": 123
+//     }
+//   ]
+// }
+
+// Метаданные теста (связан с шагом курса один-к-одному)
+Table tests {
+  id bigint [pk, increment]
+  step_id bigint [unique, not null, ref: > steps.id] // шаг, к которому относится тест
+  time_limit_minutes int // ограничение по времени (null = без ограничения)
+  attempts_allowed int [default: 1] // количество разрешённых попыток (0 = неограниченно)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+// Вопросы теста
+Table questions {
+  id bigint [pk, increment]
+  test_id bigint [not null, ref: > tests.id]
+  text text [not null]
+  type varchar(20) [not null] // TEXT_INPUT, SINGLE_CHOICE, MULTIPLE_CHOICE - вариант ответа
+  points int [not null, default: 1] // баллы за правильный ответ
+  order_index int [not null] // порядковый номер в тесте
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  correct_text text // если вопрос текстовый (type = TEXT_INPUT), то в этом хрнанится правильный ответ (иначе null)
+  indexes {
+    (test_id, order_index)
+  }
+}
+
+// Таблица для вопросов с выбором (одиночных или множественных) (связь один ко многим)
+Table choice_questions {
+  id bigint [pk, increment]
+  questions_id bigint [not null, ref: > questions.id]
+  order_number bigint [not null] // номер ответа в последовательности ответов
+  text text
+  is_correct boolean
+  indexes {
+    (questions_id)
+  }
+}
+
+// Таблица попыток прохождения теста
+Table test_attempts {
+  id bigint [pk, increment]
+  test_id bigint [not null, ref: > tests.id]
+  user_id bigint [not null, ref: > users.id]
+  attempt_number int [not null] // номер попытки у конкретного пользователя
+  started_at timestamp [not null, default: `now()`]
+  completed_at timestamp // когда завершил (null = ещё идёт)
+  score int // набранный балл (в процентах)
+  indexes {
+    (test_id, user_id, attempt_number) [unique]
+    (user_id, started_at)
+  }
+}
+
+// Ответы пользователя на вопросы в рамках попытки
+Table user_answers {
+  id bigint [pk, increment]
+  test_attempt_id bigint [not null, ref: > test_attempts.id]
+  question_id bigint [not null, ref: > questions.id]
+  type varchar(20) [not null] // TEXT_INPUT, SINGLE_CHOICE, MULTIPLE_CHOICE - вариант ответа
+  text text
+  is_correct boolean
+  indexes {
+    (test_attempt_id, question_id) [unique]
+  }
+}
+
+// Варианты ответа с выбором пользователя на вопросы в рамках попытки
+// Если вариант с множественным ответом то таблица будет один ко многим
+// Если вариант с одиночным ответом то таблица будет ссылаться один раз на индекс из choice_questions
+Table choice_user_answers {
+  user_answer_id bigint [not null, ref: > user_answers.id]
+  choice_questions_id bigint [not null, ref: > choice_questions.id]
+  indexes {
+    (user_answer_id, choice_questions_id) [pk]
+  }
+}
+
+/*
+Примечание:
+
+type в вопросах и ответах:
+- TEXT_INPUT - текстовые вопросы
+- SINGLE_CHOICE - вопросы с одиночным выбором
+- MULTIPLE_CHOICE - вопросы с множественным выбором
+Либо text, либо single_choice, либо multiple_choice, что-то одно должно иметь данные у вопроса и ответа правильного и пользователя
+*/
