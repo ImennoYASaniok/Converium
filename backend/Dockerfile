@@ -1,11 +1,18 @@
 # Этап сборки
 FROM gradle:7.6-jdk17 AS build
-COPY . /home/gradle/src
 WORKDIR /home/gradle/src
-RUN gradle bootJar --no-daemon --info
 
-# Этап выполнения
+COPY gradlew gradle build.gradle.kts settings.gradle.kts ./
+RUN chmod +x gradlew
+RUN ./gradlew dependencies --no-daemon
+
+COPY src ./src
+RUN ./gradlew bootJar --no-daemon --info
+
+# Финальный этап
 FROM eclipse-temurin:17-jre-alpine
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
 EXPOSE 8080
 COPY --from=build /home/gradle/src/build/libs/*.jar /app/app.jar
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
