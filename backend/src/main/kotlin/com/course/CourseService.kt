@@ -7,6 +7,9 @@ import com.course.repositories.CourseMembershipRepository
 import com.course.repositories.CourseRepository
 import com.course.repositories.StepEdgeRepository
 import com.course.repositories.StepRepository
+import com.user.dtos.UserSummaryDto
+import com.user.models.User
+//import com.notification.TelegramModerationService
 import com.user.repositories.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -21,7 +24,7 @@ class CourseService(
     private val courseEnrollmentRepository: CourseEnrollmentRepository,
     private val stepRepository: StepRepository,
     private val stepEdgeRepository: StepEdgeRepository,
-    private val userRepository: UserRepository,
+    private val userRepository: UserRepository
 ) {
     private val logger = LoggerFactory.getLogger(CourseService::class.java)
 
@@ -52,16 +55,16 @@ class CourseService(
         )
 
         val savedCourse = courseRepository.save(course)
-        val ownerMembership = CourseMembership(
-            course = savedCourse,
-            user = owner,
-            ability = UserAbility.ADMIN,
-            grantedBy = owner
-        )
-        courseMembershipRepository.save(ownerMembership)
+        if (dto.visibility != CourseVisibility.PUBLIC) {
+            val ownerMembership = CourseMembership(
+                course = savedCourse,
+                user = owner,
+                ability = UserAbility.ADMIN,
+                grantedBy = owner
+            )
+            courseMembershipRepository.save(ownerMembership)
+        }
 
-
-        // TODO: если PUBLIC — отправить уведомление в Telegram на модерацию
 
 
         logger.info("Курс создан, id={}", savedCourse.id)
@@ -81,7 +84,7 @@ class CourseService(
             id = course.id!!,
             title = course.title,
             description = course.description,
-            ownerId = course.owner.id!!,
+            owner = UserSummaryDto.from(course.owner),
             visibility = course.visibility,
             moderationStatus = course.moderationStatus,
             canEdit = canEdit(course, userId),
@@ -89,7 +92,7 @@ class CourseService(
             enrolledCount = course.enrollments.size
         )
     }
-
+    @Transactional
     fun updateCourse(courseId: Long, dto: UpdateCourseDto, requesterId: Long): Course {
         logger.info("Обновление курса {} пользователем {}...", courseId, requesterId)
 
@@ -106,7 +109,7 @@ class CourseService(
         dto.visibility?.let { newVisibility ->
             if (newVisibility == CourseVisibility.PUBLIC && course.visibility != CourseVisibility.PUBLIC) {
                 course.moderationStatus = ModerationStatus.PENDING
-                // TODO: отправить уведомление в Telegram на модерацию
+
             }
             if (course.visibility == CourseVisibility.PUBLIC && newVisibility != CourseVisibility.PUBLIC) {
                 course.moderationStatus = null
@@ -160,18 +163,89 @@ class CourseService(
 
     }
 
-    fun updateModerationStatus(courseId: Long, status: ModerationStatus, moderatorId: Long) { // для админов
-    }
-
+    @Transactional
     fun addMember(courseId: Long, userId: Long, ability: UserAbility, granterId: Long): CourseMembership {
-        return TODO("Provide the return value")
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
+        if (!canManageMembers(course, granterId)) {
+            throw RuntimeException("Нет прав для добавления пользователей")
+        }
+        if (course.owner.id == userId) {
+            throw IllegalStateException("Пользователь уже является участником (владельцем)")
+        }
+        if (course.memberships.any { it.user.id == userId }) {
+            throw IllegalStateException("Пользователь уже является участником")
+        }
+        val user = userRepository.findById(userId)
+            .orElseThrow { IllegalArgumentException("Пользователь для добавления не найден: $userId") }
+        val granter = userRepository.findById(granterId)
+            .orElseThrow { IllegalArgumentException("Админ не найден: $granterId") }
+
+        val newMember = CourseMembership(
+            course = course,
+            user =  user,
+            ability = ability,
+            grantedBy = granter
+        )
+
+        return courseMembershipRepository.save(newMember)
+    }
+    @Transactional
+    fun removeMember(courseId: Long, userId: Long, removerId: Long) {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
+
+        if (!canManageMembers(course, removerId)) {
+            throw RuntimeException("Нет прав для удаления участников")
+        }
+
+        if (course.owner.id == userId) {
+            throw IllegalStateException("Нельзя удалить владельца курса")
+        }
+
+        if (userId == removerId) {
+            course.memberships.find {
+                it.user.id != removerId && it.ability == UserAbility.ADMIN
+            }?:throw IllegalStateException("Нельзя удалить себя — вы последний администратор")
+        }
+
+        courseMembershipRepository.deleteByCourseIdAndUserId(courseId, userId)
     }
 
-    fun removeMember(courseId: Long, userId: Long, removerId: Long) {}
+    @Transactional
+    fun updateMemberAbility(
+        courseId: Long,
+        userId: Long,
+        newAbility: UserAbility,
+        updaterId: Long
+    ): CourseMembership {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
 
-    fun updateMemberAbility(courseId: Long, userId: Long, newAbility: UserAbility, updaterId: Long): CourseMembership {
-        return TODO("Provide the return value")
+        if (!canManageMembers(course, updaterId)) {
+            throw RuntimeException("Нет прав для изменения участников")
+        }
+
+        val membership = course.memberships.find { it.user.id == userId }
+            ?: throw IllegalArgumentException("Участник не найден в курсе: $userId")
+
+        if (course.owner.id == userId) {
+            throw IllegalStateException("Нельзя изменить права владельца курса")
+        }
+
+        if (membership.user.id == updaterId && newAbility != UserAbility.ADMIN) {
+            if (userId == updaterId) {
+                course.memberships.find {
+                    it.user.id != updaterId && it.ability == UserAbility.ADMIN
+                }?:throw IllegalStateException("Нельзя понизить себя — вы последний администратор")
+            }
+
+        }
+
+        membership.ability = newAbility
+        return courseMembershipRepository.save(membership)
     }
+
 
 
     fun addStep(courseId: Long, dto: CreateStepDto, requesterId: Long): Step {
@@ -196,6 +270,7 @@ class CourseService(
 
 
     private fun canView(course: Course, userId: Long): Boolean {
+        if (userId == course.owner.id) return true
         return when (course.visibility) {
             CourseVisibility.PUBLIC -> course.moderationStatus == ModerationStatus.APPROVED
             CourseVisibility.FRIENDS_ONLY -> {
@@ -216,7 +291,9 @@ class CourseService(
     }
 
     private fun canManageMembers(course: Course, userId: Long): Boolean {
-        return TODO("Provide the return value")
+        if (course.owner.id == userId) return true
+        val membership = course.memberships.find { it.user.id == userId }
+        return membership?.ability == UserAbility.ADMIN
     }
 
     private fun isMember(course: Course, userId: Long): Boolean {
@@ -231,7 +308,7 @@ class CourseService(
         id = course.id!!,
         title = course.title,
         description = course.description,
-        ownerId = course.owner.id!!,
+        owner = UserSummaryDto.from(course.owner),
         visibility = course.visibility,
         moderationStatus = course.moderationStatus,
         canEdit = canEdit(course, userId),

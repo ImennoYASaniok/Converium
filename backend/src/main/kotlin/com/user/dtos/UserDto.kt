@@ -1,5 +1,6 @@
 package com.user.dtos
 
+import com.user.models.User
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -71,3 +72,54 @@ data class UpdateUserRequest(
     @field:Size(min = 5)
     val newPassword: String?
 )
+
+
+data class UserSummaryDto(
+    val id: Long,
+    val login: String,
+    val name: String,
+    val surname: String,
+    val avatar: String?
+) {
+    companion object {
+        fun from(entity: User): UserSummaryDto {
+            return UserSummaryDto(
+                id = entity.id,
+                login = entity.login,
+                name = entity.name,
+                surname = entity.surname,
+                avatar = entity.profilePicture.takeIf { it.isNotBlank() }
+            )
+        }
+    }
+}
+
+data class UserProfileDto(
+    val id: Long,
+    val login: String,
+    val name: String,
+    val surname: String,
+    val email: String,
+    val description: String,
+    val avatar: String?,
+    val contacts: List<String>,
+    val friends: List<UserSummaryDto>,
+    val friendRequests: List<UserSummaryDto>
+) {
+    companion object {
+        fun from(entity: User): UserProfileDto {
+            return UserProfileDto(
+                id = entity.id,
+                login = entity.login,
+                name = entity.name,
+                surname = entity.surname,
+                email = entity.email,
+                description = entity.description,
+                avatar = entity.profilePicture.takeIf { it.isNotBlank() },
+                contacts = entity.contacts.toList(),
+                friends = entity.friends.map { UserSummaryDto.from(it) },
+                friendRequests = entity.friendRequests.map { UserSummaryDto.from(it) }
+            )
+        }
+    }
+}

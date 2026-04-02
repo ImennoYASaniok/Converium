@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data_2:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"] # ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -36,7 +36,6 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
     ports:
       - "${SERVER_PORT}:8080"
-
 
 volumes:
   postgres_data_2:
