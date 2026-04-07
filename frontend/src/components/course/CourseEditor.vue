@@ -1,81 +1,42 @@
 <script>
+import { courseApi } from '../../api/course_api.js'
+import AIIcon from './AIIcon.vue'
+import JsonEditor from './JsonEditor.vue'
+import StepEditor from './StepEditor.vue'
 
-const mockDatabase = {
-    courses: {
-        1: {
-            id: 1,
-            name: 'Введение в машинное обучение',
-            steps: [
-                {
-                    id: 'initial',
-                    name: 'Начало',
-                    content: 'Введение в курс машинного обучения',
-                    type: 'THEORY',
-                    x: 0,
-                    y: 0,
-                    isInitial: true
-                },
-                {
-                    id: 2,
-                    name: 'Что такое ML?',
-                    content: 'Определение машинного обучения',
-                    type: 'THEORY',
-                    x: 200,
-                    y: -150,
-                    isInitial: false
-                },
-                {
-                    id: 3,
-                    name: 'Типы ML',
-                    content: 'Обучение с учителем, без учителя',
-                    type: 'THEORY',
-                    x: 200,
-                    y: 150,
-                    isInitial: false
-                },
-                {
-                    id: 4,
-                    name: 'Тест: Основы',
-                    content: 'Проверка знаний',
-                    type: 'TEST',
-                    x: 450,
-                    y: 0,
-                    isInitial: false
-                }
-            ],
-            edges: [
-                { id: 1, fromStepId: 'initial', toStepId: 2 },
-                { id: 2, fromStepId: 'initial', toStepId: 3 },
-                { id: 3, fromStepId: 2, toStepId: 4 },
-                { id: 4, fromStepId: 3, toStepId: 4 }
-            ]
-        }
-    },
+const STORAGE_KEY = 'course_editor_data'
+const STORAGE_VERSION = '1.0'
+const HISTORY_LIMIT = 50
 
-    api: {
-        async getCourseStructure(courseId) {
-            const course = mockDatabase.courses[courseId]
-            if (!course) throw new Error('Курс не найден')
-            return {
-                steps: course.steps.map(s => ({ ...s })),
-                edges: course.edges.map(e => ({ ...e }))
-            }
-        },
-
-        async saveCourseStructure(courseId, data) {
-            const course = mockDatabase.courses[courseId]
-            if (!course) throw new Error('Курс не найден')
-            course.steps = data.steps.map(s => ({ ...s }))
-            course.edges = data.edges.map(e => ({ ...e }))
-            console.log('Сохранено:', JSON.stringify(data, null, 2))
-            return { success: true }
-        },
-    }
-}
+try {
+    NProgress.configure({ easing: 'linear', speed: 200, trickleSpeed: 120, showSpinner: false });
+} catch { }
 
 export default {
+    name: 'CourseEditor',
+
+    props: {
+        courseId: {
+            type: Number,
+            required: true
+        },
+        courseName: {
+            type: String,
+            default: 'Новый курс'
+         }
+    },
+
+    components: {
+        JsonEditor,
+        AIIcon,
+        StepEditor,
+    },
+
     data() {
         return {
+
+            isRequesting: false,
+
             canvasOffset: { x: 0, y: 0 },
             scale: 1,
             minScale: 0.2,
@@ -101,7 +62,7 @@ export default {
                 x: 0,
                 y: 0,
                 step: null,
-                canvasPosition: null
+                canvasPosition: { x: 0, y: 0 }
             },
 
             edgeContextMenu: {
@@ -117,7 +78,7 @@ export default {
                 stepId: null,
                 form: {
                     name: '',
-                    content: '',
+                    description: '',
                     type: 'THEORY'
                 }
             },
@@ -125,11 +86,139 @@ export default {
             nextStepId: 10,
             nodeSize: 100,
             initialNodeSize: 120,
-            arrowOffset: 15
+            arrowOffset: 15,
+
+            jsonText: '',
+            lastAppliedJson: '',
+            jsonError: '',
+
+            isAiActive: false,
+            aiMessage: {
+                content: '',
+                visible: false,
+                timeout: null,
+                x: 20,
+                y: 200
+            },
+
+            autoSaveEnabled: true,
+            lastSavedTime: null,
+            saveTimeout: null,
+
+            history: [],
+            historyIndex: -1,
+            isUndoing: false,
+
+            stepEditor: {
+                visible: false,
+                step: null,
+                originPosition: { x: 0, y: 0, width: 100, height: 100 },
+                closing: false
+            }
+        }
+    },
+
+    watch: {
+        steps: {
+            deep: true,
+            handler() {
+                this.updateJsonFromData()
+                if (this.autoSaveEnabled) {
+                    this.debouncedSave()
+                }
+            }
+        },
+
+        edges: {
+            deep: true,
+            handler() {
+                this.updateJsonFromData()
+                if (this.autoSaveEnabled) {
+                    this.debouncedSave()
+                }
+            }
+        },
+
+        scale() {
+            if (this.autoSaveEnabled) {
+                this.debouncedSave()
+            }
+        },
+
+        canvasOffset: {
+            deep: true,
+            handler() {
+                if (this.autoSaveEnabled) {
+                    this.debouncedSave()
+                }
+            }
         }
     },
 
     methods: {
+        handleKeyDown(e) {
+            let key = e.key.toLowerCase()
+            if (this.stepEditor.visible) {
+                if (key === 'escape') {
+                    this.closeStepEditor()
+                }
+                return
+            }
+            if (e.ctrlKey && key === 's' && !this.modal.visible) {
+                e.preventDefault()
+                this.applyJson()
+                return
+            }
+
+            const isJsonEditorFocused = this.$refs.jsonEditorRef?.$el?.contains(document.activeElement) ||
+                document.activeElement?.classList?.contains('json-input') ||
+                document.activeElement?.closest('.json-editor-container')
+
+            if (isJsonEditorFocused) {
+                return
+            }
+
+            if (e.ctrlKey && key === 'z' && !e.shiftKey && !this.modal.visible) {
+                e.preventDefault()
+                this.undo()
+                return
+            }
+
+            if ((e.ctrlKey && key === 'y') || (e.ctrlKey && e.shiftKey && key === 'z')) {
+                e.preventDefault()
+                this.redo()
+                return
+            }
+
+            if (key === 'escape') {
+                this.closeModal()
+                this.hideContextMenus()
+
+                if (this.isDraggingEdge) {
+                    this.isDraggingEdge = false
+                    this.dragEdgeStart = null
+                }
+                if (this.isDraggingStep) {
+                    this.isDraggingStep = false
+                    this.draggedStep = null
+                }
+                return
+            }
+
+            if (key === 'delete' && !this.modal.visible) {
+                if (this.selectedEdge) {
+                    this.deleteEdge(this.selectedEdge)
+                } else if (this.selectedStep) {
+                    this.deleteStep(this.selectedStep)
+                }
+                return
+            }
+
+            if ((e.ctrlKey && e.altKey && key === 'l') && !this.modal.visible) {
+                this.autoLayout()
+                return
+            }
+        },
         autoLayout() {
             if (this.steps.length === 0) return
             const root = this.steps.find(s => s.isInitial) || this.findRoot()
@@ -180,7 +269,7 @@ export default {
             })
             this.orderNodesByLevel(nodesByLevel, children, parents)
             const levelHeight = 300
-            const nodeWidth = 260
+            const nodeWidth = 265
             const layout = {}
 
             Object.entries(nodesByLevel).forEach(([level, nodeIds]) => {
@@ -203,6 +292,7 @@ export default {
                 }
             })
 
+            this.saveHistory()
             setTimeout(() => this.centerCanvas(), 350)
         },
 
@@ -287,6 +377,7 @@ export default {
                 this.selectedEdge = null
             }
             this.edgeContextMenu.visible = false
+            this.saveHistory()
         },
 
         deleteEdge(edge) {
@@ -294,6 +385,7 @@ export default {
             if (this.selectedEdge?.id === edge.id) {
                 this.selectedEdge = null
             }
+            this.saveHistory()
         },
         getEdgeStart(edge) {
             const from = this.getStepById(edge.fromStepId)
@@ -396,6 +488,7 @@ export default {
             this.selectedStep = step
             this.selectedEdge = null
 
+            this.dragStartPos = { x: step.x, y: step.y }
             const canvasPos = this.screenToCanvas(e.clientX, e.clientY)
             this.dragStart = {
                 x: canvasPos.x - step.x,
@@ -416,6 +509,7 @@ export default {
             if (this.isDraggingEdge && this.dragEdgeStart && this.dragEdgeStart.id !== targetStep.id) {
                 const exists = this.edges.some(edge =>
                     edge.fromStepId === this.dragEdgeStart.id && edge.toStepId === targetStep.id
+
                 )
 
                 if (!exists) {
@@ -452,10 +546,17 @@ export default {
         },
 
         handleMouseUp() {
+            if (this.isDraggingStep && this.draggedStep && this.dragStartPos) {
+                const step = this.draggedStep
+                if (step.x !== this.dragStartPos.x || step.y !== this.dragStartPos.y) {
+                    this.saveHistory()
+                }
+            }
+
             this.isPanning = false
             this.isDraggingStep = false
             this.draggedStep = null
-
+            this.dragStartPos = null
             if (this.isDraggingEdge) {
                 this.isDraggingEdge = false
                 this.dragEdgeStart = null
@@ -469,7 +570,6 @@ export default {
                 x: canvasPos.x,
                 y: canvasPos.y
             }
-
             this.showContextMenuAt(e.clientX, e.clientY, null)
         },
 
@@ -492,7 +592,6 @@ export default {
 
         hideContextMenus() {
             this.contextMenu.visible = false
-            this.contextMenu.canvasPosition = null
             this.edgeContextMenu.visible = false
         },
 
@@ -503,7 +602,7 @@ export default {
                 stepId: null,
                 form: {
                     name: '',
-                    content: '',
+                    description: '',
                     type: 'THEORY'
                 }
             }
@@ -522,7 +621,7 @@ export default {
                 stepId: step.id,
                 form: {
                     name: step.name,
-                    content: step.content,
+                    description: step.description,
                     type: step.type
                 }
             }
@@ -543,30 +642,31 @@ export default {
                 const step = this.steps.find(s => s.id === this.modal.stepId)
                 if (step) {
                     step.name = this.modal.form.name
-                    step.content = this.modal.form.content
+                    step.description = this.modal.form.description
                     step.type = this.modal.form.type
                 }
             } else {
-                const position = this.contextMenu.canvasPosition || { x: 0, y: 0 }
-
                 const newStep = {
                     id: this.nextStepId++,
                     name: this.modal.form.name,
-                    content: this.modal.form.content,
+                    description: this.modal.form.description,
+                    content: '',
                     type: this.modal.form.type,
-                    x: position.x,
-                    y: position.y,
+                    x: this.contextMenu.canvasPosition.x || 0,
+                    y: this.contextMenu.canvasPosition.y || 0,
                     isInitial: false
                 }
                 this.steps.push(newStep)
                 this.selectedStep = newStep
-            }
 
+            }
+            this.saveHistory()
             this.closeModal()
         },
 
         deleteStep(step) {
             if (confirm(`Удалить шаг "${step.name}" и все связи с ним?`)) {
+
                 this.steps = this.steps.filter(s => s.id !== step.id)
                 this.edges = this.edges.filter(e =>
                     e.fromStepId !== step.id && e.toStepId !== step.id
@@ -575,13 +675,15 @@ export default {
                 if (this.selectedStep?.id === step.id) {
                     this.selectedStep = null
                 }
+                this.saveHistory()
+
             }
             this.hideContextMenus()
         },
 
         createEdge(fromId, toId) {
             if (this.wouldCreateCycle(fromId, toId)) {
-                alert('Хватит баловаться. В дереве не может быть циклов!')
+                alert('Хватит баловаться. Можно создавать только DAG структуры (без циклов).')
                 return
             }
 
@@ -591,6 +693,7 @@ export default {
                 toStepId: toId
             }
             this.edges.push(newEdge)
+            this.saveHistory()
         },
 
         wouldCreateCycle(fromId, toId) {
@@ -637,58 +740,482 @@ export default {
             return labels[type] || type
         },
 
-        handleKeyDown(e) {
-            if (e.key === 'Escape') {
-                this.closeModal()
-                this.hideContextMenus()
-
-                if (this.isDraggingEdge) {
-                    this.isDraggingEdge = false
-                    this.dragEdgeStart = null
-                }
-                if (this.isDraggingStep) {
-                    this.isDraggingStep = false
-                    this.draggedStep = null
-                }
-            }
-
-            if (e.key === 'Delete' && !this.modal.visible) {
-                if (this.selectedEdge) {
-                    this.deleteEdge(this.selectedEdge)
-                } else if (this.selectedStep) {
-                    this.deleteStep(this.selectedStep)
-                }
-            }
-
-            if ((e.key === 'l' || e.key === 'L') && !this.modal.visible) {
-                this.autoLayout()
-            }
-        },
-
         async loadCourseData() {
+            this.isRequesting = true
             try {
-                const data = await mockDatabase.api.getCourseStructure(this.courseId)
-                this.steps = data.steps.map(s => ({ ...s }))
-                this.edges = data.edges.map(e => ({ ...e }))
+                const response = await courseApi.getStructure(this.courseId)
+                this.steps = response.data.steps || []
+                this.edges = response.data.edges || []
 
                 const maxId = Math.max(...this.steps
                     .map(s => typeof s.id === 'number' ? s.id : 0), 0)
                 this.nextStepId = maxId + 1
             } catch (error) {
-                this.steps = [
-                    {
-                        id: 'initial',
-                        name: 'Начало',
-                        content: 'Начальный шаг курса',
-                        type: 'THEORY',
-                        x: 0,
-                        y: 0,
-                        isInitial: true
+                console.error('Failed to load course:', error)
+                if (!this.loadFromStorage()) {
+                    this.steps = [
+                        {
+                            id: 0,
+                            name: 'Введение',
+                            description: 'Начальный шаг курса',
+                            type: 'THEORY',
+                            x: 0,
+                            y: 0,
+                            isInitial: true
+                        }
+                    ]
+                    this.edges = []
+                }
+            } finally {
+                this.isRequesting = false
+            }
+        },
+
+        async saveCourse() {
+            try {
+                this.isRequesting = true
+                NProgress.start()
+                const payload = {
+                    steps: this.steps.map(s => ({ ...s })),
+                    edges: this.edges.map(e => ({ ...e }))
+                }
+
+                await courseApi.saveStructure(this.courseId, payload)
+                alert('Сохранено!')
+            } catch (error) {
+                alert('Ошибка сохранения: ' + error.message)
+            }
+            finally {
+                NProgress.done()
+                this.isRequesting = false
+            }
+        },
+
+        updateJsonFromData() {
+            const data = {
+                steps: this.steps.map(s => ({
+                    id: s.id,
+                    title: s.name,
+                    description: s.description,
+                    content: s.content,
+                    type: s.type,
+                    x: Math.round(s.x),
+                    y: Math.round(s.y)
+                })),
+                edges: this.groupEdgesForExport()
+            }
+            this.jsonText = JSON.stringify(data, null, 2)
+            this.lastAppliedJson = this.jsonText
+            this.jsonError = ''
+        },
+
+        groupEdgesForExport() {
+            const grouped = {}
+            this.edges.forEach(edge => {
+                if (!grouped[edge.fromStepId]) {
+                    grouped[edge.fromStepId] = []
+                }
+                grouped[edge.fromStepId].push(edge.toStepId)
+            })
+
+            return Object.entries(grouped).map(([from, to]) => ({
+                from: parseInt(from) || from,
+                to
+            }))
+        },
+
+        applyJson() {
+            try {
+                this.jsonError = ''
+                const data = JSON.parse(this.jsonText)
+
+                if (!data.steps || !Array.isArray(data.steps)) {
+                    throw new Error('Отсутствует поле "steps" или оно не является массивом')
+                }
+                if (!data.edges || !Array.isArray(data.edges)) {
+                    throw new Error('Отсутствует поле "edges" или оно не является массивом')
+                }
+
+                let maxId = 0
+
+                const newSteps = data.steps.map((step, index) => {
+                    if (step.id === undefined) {
+                        throw new Error(`Шаг ${index}: отсутствует поле "id"`)
                     }
-                ]
-                this.edges = []
+                    if (!step.title && !step.name) {
+                        throw new Error(`Шаг ${step.id}: отсутствует поле "title" или "name"`)
+                    }
+                    if (!step.type) {
+                        throw new Error(`Шаг ${step.id}: отсутствует поле "type"`)
+                    }
+
+                    const processedStep = {
+                        id: parseInt(step.id),
+                        name: step.title || step.name,
+                        description: step.description || '',
+                        type: step.type.toUpperCase(),
+                        x: step.x !== undefined ? step.x : null,
+                        y: step.y !== undefined ? step.y : null,
+                        isInitial: index === 0
+                    }
+                    if (isNaN(processedStep.id)) {
+                        throw new Error(`${index}-й шаг: поле "id" должно быть числом`)
+                    }
+                    const validTypes = ['THEORY', 'TEST', 'PRACTICE']
+                    if (!validTypes.includes(processedStep.type)) {
+                        throw new Error(`Шаг ${step.id}: неверный тип "${step.type}". Допустимые: ${validTypes.join(', ')}`)
+                    }
+                    maxId = Math.max(maxId, processedStep.id)
+                    return processedStep
+                })
+
+
+
+                const ids = newSteps.map(s => s.id)
+                const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index)
+                if (duplicates.length > 0) {
+                    throw new Error(`Дублирующиеся ID шагов: ${duplicates.join(', ')}`)
+                }
+
+                const newEdges = []
+                data.edges.forEach((edgeGroup, index) => {
+                    if (edgeGroup.from === undefined) {
+                        throw new Error(`Связь ${index}: отсутствует поле "from"`)
+                    }
+                    if (!edgeGroup.to || !Array.isArray(edgeGroup.to)) {
+                        throw new Error(`Связь ${index}: поле "to" должно быть массивом`)
+                    }
+
+                    edgeGroup.to.forEach((toId, index) => {
+                        if (index == edgeGroup.to.indexOf(toId)) {
+                            if (!newSteps.find(s => s.id == edgeGroup.from)) {
+                                throw new Error(`Связь: шаг с id="${edgeGroup.from}" не найден`)
+                            }
+                            if (!newSteps.find(s => s.id == toId)) {
+                                throw new Error(`Связь: шаг с id="${toId}" не найден`)
+                            }
+
+                            newEdges.push({
+                                id: Date.now() + Math.random(),
+                                fromStepId: edgeGroup.from,
+                                toStepId: toId
+                            })
+                        }
+                    })
+
+                })
+
+                if (this.hasCycle(newSteps, newEdges)) {
+                    throw new Error('Обнаружена циклическая зависимость в структуре')
+                }
+
+                const hasMissingCoords = newSteps.some(s => s.x === null || s.y === null)
+                if (hasMissingCoords) {
+                    if (confirm('У некоторых шагов отсутствуют координаты. Сгенерировать их автоматически? (применится выравнивание)')) {
+                        this.$nextTick(() => {
+                            this.autoLayout()
+                        })
+                    }
+                    else if (confirm('Заполнить отсутствующие координаты нулями?')) {
+                        newSteps.forEach(s => {
+                            if (s.x === null) s.x = 0
+                            if (s.y === null) s.y = 0
+                        })
+                    }
+                    else {
+                        alert('Отмена применения структкры.')
+                        return
+                    }
+
+                }
+                this.steps = newSteps
+                this.edges = newEdges
+
+                this.nextStepId = maxId + 1
+
+                this.lastAppliedJson = this.jsonText
+                this.selectedStep = null
+                this.selectedEdge = null
+
+                this.saveHistory()
+                alert('✅ Структура применена!')
+
+
+            } catch (error) {
+                this.jsonError = error.message
+                alert('❌ Ошибка: ' + error.message)
+                console.error('JSON parse error:', error)
+            }
+        },
+
+        hasCycle(steps, edges) {
+            const adj = {}
+            steps.forEach(s => adj[s.id] = [])
+            edges.forEach(e => {
+                if (adj[e.fromStepId]) adj[e.fromStepId].push(e.toStepId)
+            })
+
+            const visited = new Set()
+            const recStack = new Set()
+
+            const dfs = (node) => {
+                visited.add(node)
+                recStack.add(node)
+
+                for (const neighbor of (adj[node] || [])) {
+                    if (!visited.has(neighbor)) {
+                        if (dfs(neighbor)) return true
+                    } else if (recStack.has(neighbor)) {
+                        return true
+                    }
+                }
+
+                recStack.delete(node)
+                return false
+            }
+
+            for (const step of steps) {
+                if (!visited.has(step.id)) {
+                    if (dfs(step.id)) return true
+                }
+            }
+            return false
+        },
+
+        formatJson() {
+            try {
+                const parsed = JSON.parse(this.jsonText)
+                this.jsonText = JSON.stringify(parsed, null, 2)
+                this.jsonError = ''
+            } catch (error) {
+                this.jsonError = 'Невозможно форматировать: ' + error.message
+            }
+        },
+
+        showAiMessage(data) {
+            this.aiMessage.content = data.angerLevel > 0.3 ? "<div>Хватит!</div>"
+                : "<div>Привет! Я ИИ помощник.</div><div>Закинь мне материал —</div><div>Составлю структуру</div>"
+            this.aiMessage.visible = true
+
+
+            if (this.aiMessage.timeout) {
+                clearTimeout(this.aiMessage.timeout)
+                this.aiMessage.timeout = null
+            }
+            this.aiMessage.timeout = setTimeout(() => {
+                if (this.aiMessage.visible) {
+                    this.closeAiMessage()
+                }
+            }, 5000)
+        },
+
+        closeAiMessage() {
+            this.aiMessage.visible = false
+        },
+
+        saveToStorage() {
+            try {
+                const data = {
+                    version: STORAGE_VERSION,
+                    timestamp: Date.now(),
+                    courseId: this.courseId,
+                    steps: this.steps.map(s => ({
+                        id: parseInt(s.id),
+                        name: s.name,
+                        description: s.description,
+                        content: s.content,
+                        type: s.type,
+                        x: s.x,
+                        y: s.y,
+                        isInitial: s.isInitial
+                    })),
+                    edges: this.edges.map(e => ({
+                        id: e.id,
+                        fromStepId: parseInt(e.fromStepId),
+                        toStepId: parseInt(e.toStepId)
+                    })),
+                    view: {
+                        scale: this.scale,
+                        offsetX: this.canvasOffset.x,
+                        offsetY: this.canvasOffset.y
+                    }
+                }
+
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+                this.lastSavedTime = new Date().toLocaleTimeString()
+
+                console.log('Сохранено в', this.lastSavedTime)
+            } catch (error) {
+                console.error('Ошибка сохранения в localStorage:', error)
+            }
+        },
+
+        loadFromStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY)
+                if (!saved) return false
+
+                const data = JSON.parse(saved)
+
+                if (data.version !== STORAGE_VERSION) {
+                    console.warn(`localStorage: несоответствие версий (${data.version} и настоящей версии ${STORAGE_VERSION})`)
+                    return false
+                }
+
+                if (data.courseId && data.courseId !== this.courseId) {
+                    return false
+                }
+
+                if (data.steps && data.steps.length > 0) {
+                    this.steps = data.steps
+                    this.edges = data.edges || []
+
+                    if (data.view) {
+                        this.scale = data.view.scale || 1
+                        this.canvasOffset.x = data.view.offsetX || 0
+                        this.canvasOffset.y = data.view.offsetY || 0
+                    }
+
+                    const maxId = Math.max(...this.steps
+                        .map(s => parseInt(s.id)), 0)
+                    this.nextStepId = maxId + 1
+
+                    this.lastSavedTime = new Date(data.timestamp).toLocaleString()
+                    console.log('Курс загружен из localStorage в', this.lastSavedTime)
+                    return true
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки из localStorage:', error)
+            }
+            return false
+        },
+
+        clearStorage() {
+            if (confirm('Очистить сохранённые данные?')) {
+                localStorage.removeItem(STORAGE_KEY)
+                this.lastSavedTime = null
+                alert('Сохранённые данные очищены')
+            }
+        },
+
+        manualSave() {
+            this.saveToStorage()
+            alert('Курс сохранён в памяти (для полного сохранения нажмите "Сохранить" справа сверху)')
+        },
+
+        saveHistory() {
+            if (this.isUndoing) return
+
+            if (this.historyIndex < this.history.length - 1) {
+                this.history = this.history.slice(0, this.historyIndex + 1)
+            }
+            const state = {
+                timestamp: Date.now(),
+                steps: this.steps.map(s => ({
+                    id: parseInt(s.id),
+                    name: s.name,
+                    description: s.description,
+                    content: s.content,
+                    type: s.type,
+                    x: s.x,
+                    y: s.y,
+                    isInitial: s.isInitial
+                })),
+                edges: this.edges.map(e => ({
+                    id: e.id,
+                    fromStepId: parseInt(e.fromStepId),
+                    toStepId: parseInt(e.toStepId)
+                })),
+                nextStepId: this.nextStepId
+            }
+
+            this.history.push(state)
+
+            if (this.history.length > HISTORY_LIMIT) {
+                this.history.shift()
+            } else {
+                this.historyIndex++
+            }
+        },
+
+        undo() {
+            if (this.historyIndex <= 0) return
+
+            this.isUndoing = true
+            this.historyIndex--
+
+            const state = this.history[this.historyIndex]
+
+            this.steps = [...state.steps]
+            this.edges = [...state.edges]
+            this.nextStepId = state.nextStepId
+
+            this.selectedStep = null
+            this.selectedEdge = null
+
+            this.updateJsonFromData()
+
+            this.$nextTick(() => {
+                this.isUndoing = false
+            })
+        },
+
+        redo() {
+            if (this.historyIndex >= this.history.length - 1) return
+
+            this.historyIndex++
+
+            const state = this.history[this.historyIndex]
+
+            this.steps = [...state.steps]
+            this.edges = [...state.edges]
+            this.nextStepId = state.nextStepId
+
+            this.selectedStep = null
+            this.selectedEdge = null
+
+            this.updateJsonFromData()
+        },
+
+        openStepEditor(step) {
+            if (this.stepEditor.visible) return
+
+            const stepElement = document.querySelector(`[data-step-id="${step.id}"]`)
+            if (stepElement) {
+                const rect = stepElement.getBoundingClientRect()
+                this.stepEditor.originPosition = {
+                    x: rect.left,
+                    y: rect.top,
+                    width: rect.width,
+                    height: rect.height
+                }
+            }
+
+            this.stepEditor.step = step
+            this.stepEditor.visible = true
+        },
+
+        closeStepEditor() {
+            if (!this.stepEditor.visible) return
+
+            this.stepEditor.closing = true
+
+            setTimeout(() => {
+                this.stepEditor.visible = false
+                this.stepEditor.closing = false
+                this.stepEditor.step = null
+            }, 350)
+        },
+
+        saveStepContent({ id, content }) {
+            const step = this.steps.find(s => s.id === id)
+            if (step) {
+                step.content = content
+                console.log(`Сохранён контент для шага ${id}:`, content)
+                this.saveHistory()
             }
         }
+
     },
     computed: {
         canvasTransform() {
@@ -696,20 +1223,80 @@ export default {
                 transform: `translate(${this.canvasOffset.x}px, ${this.canvasOffset.y}px) scale(${this.scale})`,
                 transformOrigin: '0 0'
             }
+        },
+
+        hasJsonChanges() {
+            return this.jsonText !== this.lastAppliedJson
+        },
+
+        courseData() {
+            const edges = {};
+            for (const { fromStepId, toStepId } of this.edges) {
+                (edges[fromStepId] ??= { from: fromStepId, to: [] }).to.push(toStepId);
+            }
+            return {
+                steps: this.steps.map(s => ({
+                    id: s.id,
+                    title: s.name,
+                    description: s.description,
+                    content: s.content,
+                    type: s.type,
+                    x: s.x,
+                    y: s.y,
+                    isInitial: s.isInitial
+                })),
+                edges: Object.values(edges)
+            }
+        },
+        canUndo() {
+            return this.historyIndex > 0
+        },
+
+        canRedo() {
+            return this.historyIndex < this.history.length - 1
         }
     },
 
     async mounted() {
-        await this.loadCourseData()
-        this.centerCanvas()
+        const loaded = this.loadFromStorage()
+
+        if (!loaded) {
+            await this.loadCourseData()
+        }
+
+        this.updateJsonFromData()
+        if (!loaded) {
+            this.centerCanvas()
+        }
+
+        this.saveHistory()
 
         document.addEventListener('click', this.hideContextMenus)
         window.addEventListener('keydown', this.handleKeyDown)
+        window.addEventListener('beforeunload', this.saveToStorage)
+
+
     },
 
-    beforeDestroy() {
+    created() {
+        this.debouncedSave = () => {
+            if (this.saveTimeout) {
+                clearTimeout(this.saveTimeout)
+            }
+            this.saveTimeout = setTimeout(() => {
+                this.saveToStorage()
+            }, 3000)
+        }
+    },
+
+    beforeUnmount() {
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout)
+        }
+        this.saveToStorage()
         document.removeEventListener('click', this.hideContextMenus)
         window.removeEventListener('keydown', this.handleKeyDown)
+        window.removeEventListener('beforeunload', this.saveToStorage)
     }
 
 }
@@ -718,75 +1305,126 @@ export default {
 <template>
     <div class="course-editor">
         <div class="toolbar">
+            <h2>Редактор курса: {{ courseName }}</h2>
             <div class="toolbar-info">
                 <span>Масштаб: {{ Math.round(scale * 100) }}%</span>
                 <span>Шагов: {{ steps.length }}</span>
+                <span class="history-indicator" :class="{ 'can-undo': canUndo, 'can-redo': canRedo }">
+                    <button @click="undo" :disabled="!canUndo" title="Отменить (Ctrl+Z)">↩️</button>
+                    <span class="history-count">{{ historyIndex + 1 }}/{{ history.length }}</span>
+                    <button @click="redo" :disabled="!canRedo" title="Повторить (Ctrl+Y)">↪️</button>
+                </span>
                 <span v-if="selectedEdge" class="selected-info">Выбрана связь</span>
             </div>
             <div class="toolbar-actions">
-                <button @click="autoLayout" class="btn-layout" title="Автоматическое выравнивание (L)">
-                    Выравнивание 
+                <label class="toggle-switch" title="Автосохранение">
+                    <input type="checkbox" v-model="autoSaveEnabled">
+                    <span class="toggle-slider">
+                    </span>
+                    <span class="toggle-label">Автосохранение</span>
+                </label>
+
+                <button @click="manualSave" class="icon-btn" title="Сохранить в память">
+                    💾
                 </button>
+
+                <button @click="clearStorage" class="icon-btn icon-danger" title="Очистить сохранённые данные">
+                    🗑️
+                </button>
+
+                <span v-if="lastSavedTime" class="save-time">
+                    <p>{{ lastSavedTime }}</p>
+                </span>
+                <button @click="autoLayout" class="btn-layout"
+                    title="Автоматическое выравнивание (Ctrl+Alt+L)">Выравнивание</button>
                 <button @click="resetView" class="btn-reset">Сбросить вид</button>
+                <button :disabled="isRequesting" @click="saveCourse" class="btn-save">Сохранить</button>
             </div>
         </div>
 
-        <div ref="canvasContainer" class="canvas-container" @mousedown.left="handleCanvasMouseDown"
-            @mousemove="handleMouseMove" @mouseup="handleMouseUp" @mouseleave="handleMouseUp"
-            @wheel.prevent="handleWheel" @dblclick="handleDoubleClick">
-            <div class="transform-wrapper" :style="canvasTransform">
-                <svg class="edges-layer">
-                    <defs>
-                        <marker id="arrowhead" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto">
-                            <polygon points="0 0, 12 4, 0 8" fill="#666" />
-                        </marker>
-                    </defs>
-                    <g v-for="edge in edges" :key="'edge-' + edge.id">
-                        <line :x1="getEdgeStart(edge).x" :y1="getEdgeStart(edge).y" :x2="getEdgeEnd(edge).x"
-                            :y2="getEdgeEnd(edge).y" :class="{ 'selected-edge': selectedEdge?.id === edge.id }"
-                            stroke="#666" stroke-width="2.5" marker-end="url(#arrowhead)"
-                            @mousedown.left.stop="selectEdge(edge)"
-                            @contextmenu.prevent.stop="showEdgeContextMenu($event, edge)" />
-                    </g>
-                    <line v-if="isDraggingEdge && dragEdgeStart" :x1="dragEdgeStart.x" :y1="dragEdgeStart.y"
-                        :x2="dragCurrentX" :y2="dragCurrentY" stroke="#999" stroke-width="2.5" stroke-dasharray="5,5" />
-                </svg>
+        <div class="main-content">
+            <div ref="canvasContainer" class="canvas-container" @mousedown.left="handleCanvasMouseDown"
+                @mousemove="handleMouseMove" @mouseup="handleMouseUp" @mouseleave="handleMouseUp"
+                @wheel.prevent="handleWheel" @dblclick="handleDoubleClick">
+                <div class="transform-wrapper" :style="canvasTransform">
+                    <svg class="edges-layer">
+                        <defs>
+                            <marker id="arrowhead" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto">
+                                <polygon points="0 0, 12 4, 0 8" fill="#666" />
+                            </marker>
+                        </defs>
 
-                <div class="steps-layer">
-                    <div v-for="step in steps" :key="step.id" class="step-node" :class="{
-                        'initial-step': step.isInitial,
-                        'selected': selectedStep?.id === step.id,
-                        'edge-source': isDraggingEdge && dragEdgeStart?.id === step.id,
-                        'dragging': draggedStep?.id === step.id
-                    }" :style="getStepStyle(step)" @mousedown.left="handleStepMouseDown($event, step)"
-                        @mousedown.right.prevent="handleStepRightMouseDown($event, step)"
-                        @mouseup.right.prevent="handleStepRightMouseUp($event, step)"
-                        @contextmenu.prevent="showContextMenu($event, step)">
-                        <div class="step-content">
-                            <span class="step-name">{{ step.name }}</span>
-                            <span class="step-type">{{ getStepTypeLabel(step.type) }}</span>
+                        <g v-for="edge in edges" :key="'edge-' + edge.id">
+                            <line :x1="getEdgeStart(edge).x" :y1="getEdgeStart(edge).y" :x2="getEdgeEnd(edge).x"
+                                :y2="getEdgeEnd(edge).y" :class="{ 'selected-edge': selectedEdge?.id === edge.id }"
+                                stroke="#666" stroke-width="2.5" marker-end="url(#arrowhead)"
+                                @mousedown.left.stop="selectEdge(edge)"
+                                @contextmenu.prevent.stop="showEdgeContextMenu($event, edge)" />
+                        </g>
+
+                        <line v-if="isDraggingEdge && dragEdgeStart" :x1="dragEdgeStart.x" :y1="dragEdgeStart.y"
+                            :x2="dragCurrentX" :y2="dragCurrentY" stroke="#999" stroke-width="2.5"
+                            stroke-dasharray="5,5" />
+                    </svg>
+
+                    <div class="steps-layer">
+                        <div v-for="step in steps" :key="step.id" :data-step-id="step.id" class="step-node" :class="[
+                            'type-' + (step.type || 'theory').toLowerCase(),
+                            {
+                                'initial-step': step.isInitial,
+                                'selected': selectedStep?.id === step.id,
+                                'edge-source': isDraggingEdge && dragEdgeStart?.id === step.id,
+                                'dragging': draggedStep?.id === step.id
+                            }
+                        ]" :style="getStepStyle(step)" @mousedown.left="handleStepMouseDown($event, step)"
+                            @mousedown.right.prevent="handleStepRightMouseDown($event, step)"
+                            @mouseup.right.prevent="handleStepRightMouseUp($event, step)"
+                            @contextmenu.prevent="showContextMenu($event, step)">
+                            <div class="step-content">
+                                <span class="step-name" title="poegkpoeg">{{ step.name }}</span>
+                                <span class="step-type">{{ getStepTypeLabel(step.type) }}</span>
+                            </div>
+
+                            <div class="connection-point top"></div>
+                            <div class="connection-point right"></div>
+                            <div class="connection-point bottom"></div>
+                            <div class="connection-point left"></div>
                         </div>
-
-                        <div class="connection-point top"></div>
-                        <div class="connection-point right"></div>
-                        <div class="connection-point bottom"></div>
-                        <div class="connection-point left"></div>
                     </div>
                 </div>
+            </div>
+
+            <div class="json-panel">
+                <div class="json-header">
+                    <h3>JSON</h3>
+                    <div class="json-actions">
+                        <button @click="applyJson" class="btn-apply" :class="{ 'has-changes': hasJsonChanges }">
+                            Применить
+                        </button>
+                        <button @click="formatJson" class="btn-format">Форматировать</button>
+                    </div>
+                </div>
+
+                <JsonEditor ref="jsonEditorRef" v-model="jsonText" @apply="applyJson" class="json-editor-wrapper" />
+
+                <div v-if="jsonError" class="json-error">{{ jsonError }}</div>
             </div>
         </div>
 
         <div v-if="contextMenu.visible && !contextMenu.edge" class="context-menu"
             :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }">
             <div v-if="!contextMenu.step" class="menu-item" @click="openCreateModal">
-                Добавить шаг
+                <span class="icon">➕</span> Добавить шаг
             </div>
             <template v-else>
                 <div class="menu-item" @click="openEditModal(contextMenu.step)">
-                    Изменить шаг
+                    <span class="icon">✏️</span> Изменить шаг
+                </div>
+                <div class="menu-item" @click="openStepEditor(contextMenu.step)">
+                    <span class="icon">📝</span> Редактировать контент
                 </div>
                 <div class="menu-item delete" @click="deleteStep(contextMenu.step)">
-                    Удалить шаг
+                    <span class="icon">🗑️</span> Удалить шаг
                 </div>
             </template>
         </div>
@@ -794,7 +1432,7 @@ export default {
         <div v-if="edgeContextMenu.visible" class="context-menu"
             :style="{ left: edgeContextMenu.x + 'px', top: edgeContextMenu.y + 'px' }">
             <div class="menu-item delete" @click="deleteSelectedEdge">
-                Удалить связь
+                <span class="icon">✂️</span> Удалить связь
             </div>
         </div>
 
@@ -810,7 +1448,7 @@ export default {
 
                 <div class="form-group">
                     <label>Описание шага:</label>
-                    <textarea v-model="modal.form.content" rows="4" placeholder="Введите описание"></textarea>
+                    <textarea v-model="modal.form.description" rows="4" placeholder="Введите описание"></textarea>
                 </div>
 
                 <div class="form-group">
@@ -831,6 +1469,24 @@ export default {
             </div>
         </div>
 
+
+        <div class="ai-panel">
+            <AIIcon class="ai-assistant" ref="aiRef" :is-active="isAiActive" @interaction="showAiMessage" />
+        </div>
+        <div v-if="aiMessage.visible" class="ai-message-popup"
+            :style="{ left: aiMessage.x + 'px', bottom: aiMessage.y + 'px' }" @click.stop>
+            <div class="ai-message-content">
+                <div class="ai-message-header">
+                    <span class="ai-title">AI Помощник</span>
+                    <button class="ai-close" @click="closeAiMessage">×</button>
+                </div>
+                <div class="ai-message-text" v-html="aiMessage.content"></div>
+                <div class="ai-message-actions">
+                    <button class="ai-btn-primary" @click="openAiUpload">Загрузить материал</button>
+                </div>
+            </div>
+            <div class="ai-message-tail"></div>
+        </div>
         <div class="help-panel">
             <h4>Управление:</h4>
             <ul>
@@ -840,10 +1496,14 @@ export default {
                 <li><b>ЛКМ по связи</b> — выбрать связь</li>
                 <li><b>ПКМ по связи</b> — удалить связь</li>
                 <li><b>Delete</b> — удалить выбранное</li>
-                <li><b>L</b> — авто-выравнивание</li>
+                <li><b>Ctrl+Alt+L</b> — авто-выравнивание</li>
+                <li><b>Ctrl+S</b> — применить JSON</li>
             </ul>
         </div>
     </div>
+    <StepEditor :visible="stepEditor.visible" :step-id="stepEditor.step?.id" :step-name="stepEditor.step?.name"
+        :step-type="stepEditor.step?.type" :content="stepEditor.step?.content"
+        :origin-position="stepEditor.originPosition" @close="stepEditor.visible = false" @save="saveStepContent" />
 </template>
 
 <style scoped>
@@ -867,6 +1527,7 @@ export default {
     padding: 0 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     z-index: 100;
+    flex-shrink: 0;
 }
 
 .toolbar h2 {
@@ -934,6 +1595,38 @@ export default {
     background: #f5f5f5;
 }
 
+.btn-save {
+    padding: 8px 20px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+
+.btn-save:disabled,
+.btn-save:hover:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.btn-save:hover {
+    background: #45a049;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
 .canvas-container {
     flex: 1;
     position: relative;
@@ -997,15 +1690,91 @@ export default {
     position: absolute;
     border-radius: 50%;
     background: white;
-    border: 3px solid #2196F3;
+    border: 3px solid;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: grab;
     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
-    transition: box-shadow 0.2s, border-color 0.2s;
     user-select: none;
 }
+
+.step-node.type-theory {
+    border-color: #2196F3;
+    background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+}
+
+.step-node.type-theory:hover {
+    border-color: #1976D2;
+    box-shadow: 0 6px 20px rgba(33, 150, 243, 0.25);
+}
+
+.step-node.type-theory .connection-point {
+    background: #2196F3;
+}
+
+.step-node.type-theory .step-type {
+    color: #1976D2;
+}
+
+.step-node.type-practice {
+    border-color: #4CAF50;
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+}
+
+.step-node.type-practice:hover {
+    border-color: #388E3C;
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.25);
+}
+
+.step-node.type-practice .connection-point {
+    background: #4CAF50;
+}
+
+.step-node.type-practice .step-type {
+    color: #388E3C;
+}
+
+.step-node.type-test {
+    border-color: #E91E63;
+    background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD9 100%);
+}
+
+.step-node.type-test:hover {
+    border-color: #C2185B;
+    box-shadow: 0 6px 20px rgba(233, 30, 99, 0.25);
+}
+
+.step-node.type-test .connection-point {
+    background: #E91E63;
+}
+
+.step-node.type-test .step-type {
+    color: #C2185B;
+}
+
+.step-node.initial-step {
+    border-color: #FF9800 !important;
+    background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%) !important;
+}
+
+.step-node.initial-step .connection-point {
+    background: #FF9800 !important;
+}
+
+.step-node.initial-step .step-type {
+    color: #E65100 !important;
+}
+
+.step-node.initial-step:hover {
+    box-shadow: 0 6px 20px rgba(255, 152, 0, 0.25) !important;
+}
+
+.step-node.selected {
+    box-shadow: 0 0 0 4px rgba(156, 39, 176, 0.3) !important;
+    border-color: #9C27B0 !important;
+}
+
 
 .step-node:hover {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
@@ -1022,15 +1791,7 @@ export default {
     z-index: 1000 !important;
 }
 
-.step-node.initial-step {
-    border-color: #FF9800;
-    background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
-}
 
-.step-node.selected {
-    border-color: #9C27B0;
-    box-shadow: 0 0 0 4px rgba(156, 39, 176, 0.25);
-}
 
 .step-node.edge-source {
     border-color: #4CAF50;
@@ -1103,6 +1864,124 @@ export default {
     left: -6px;
     top: 50%;
     transform: translateY(-50%);
+}
+
+.json-panel {
+    width: 400px;
+    background: white;
+    border-left: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.json-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafafa;
+}
+
+.json-header h3 {
+    margin: 0;
+    font-size: 14px;
+    color: #333;
+    font-weight: 600;
+}
+
+.json-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-apply {
+    padding: 6px 12px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-apply.has-changes {
+    background: #FF9800;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+.btn-apply:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(33, 150, 243, 0.3);
+}
+
+.btn-format {
+    padding: 6px 12px;
+    background: white;
+    color: #666;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.btn-format:hover {
+    background: #f5f5f5;
+}
+
+.json-editor {
+    flex: 1;
+    width: 100%;
+    padding: 15px;
+    border: none;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    background: #fafafa;
+    color: #333;
+}
+
+.json-editor:focus {
+    background: white;
+}
+
+.json-error {
+    padding: 10px 15px;
+    background: #ffebee;
+    color: #c62828;
+    font-size: 12px;
+    border-top: 1px solid #ef9a9a;
+}
+
+.json-hint {
+    padding: 8px 15px;
+    background: #e3f2fd;
+    color: #1565c0;
+    font-size: 11px;
+    border-top: 1px solid #bbdefb;
+}
+
+.json-hint span {
+    font-weight: 600;
+    color: #0d47a1;
 }
 
 .context-menu {
@@ -1249,10 +2128,127 @@ export default {
     border: none;
 }
 
+.icon-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    opacity: 0.6;
+}
+
+.icon-btn:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.05);
+    transform: scale(1.1);
+}
+
+.icon-btn:active {
+    transform: scale(0.95);
+}
+
+.icon-danger:hover {
+    background: rgba(244, 67, 54, 0.1);
+}
+
+.save-time {
+    font-size: 11px;
+    color: #888;
+    margin-left: 8px;
+    padding-left: 8px;
+    border-left: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-switch input {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 48px;
+    height: 26px;
+    background: #ccc;
+    border-radius: 13px;
+    transition: background 0.3s;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+}
+
+.toggle-slider::before {
+    content: '';
+    width: 22px;
+    height: 22px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    margin-left: 1.2px;
+}
+
+.toggle-icon {
+    position: absolute;
+    left: 6px;
+    font-size: 12px;
+    transition: opacity 0.3s, transform 0.3s;
+    opacity: 0;
+}
+
+.toggle-switch input:checked+.toggle-slider {
+    background: #4CAF50;
+}
+
+.toggle-switch input:checked+.toggle-slider::before {
+    transform: translateX(24px);
+}
+
+.toggle-switch input:checked+.toggle-slider .toggle-icon {
+    opacity: 1;
+    transform: translateX(24px);
+}
+
+.toggle-switch input:not(:checked)+.toggle-slider .toggle-icon {
+    opacity: 1;
+    left: auto;
+    right: 6px;
+    filter: grayscale(100%);
+}
+
+.toggle-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.toggle-switch input:checked~.toggle-label {
+    color: #4CAF50;
+}
+
+.toggle-switch:hover .toggle-slider {
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.toggle-switch input:disabled+.toggle-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .help-panel {
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    right: 420px;
     background: white;
     padding: 16px 20px;
     border-radius: 8px;
@@ -1278,5 +2274,206 @@ export default {
 .help-panel li b {
     color: #2196F3;
     font-weight: 600;
+}
+
+.ai-assistant {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    width: fit-content;
+    height: 300px;
+    background: transparent;
+    z-index: 100;
+}
+
+.ai-message-popup {
+    position: fixed;
+    z-index: 1000;
+    animation: messageAppear 0.3s ease;
+}
+
+@keyframes messageAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.ai-message-content {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #0f3460;
+    border-radius: 16px;
+    padding: 16px 20px;
+    min-width: 220px;
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(0, 180, 255, 0.1);
+    position: relative;
+}
+
+.ai-message-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ai-icon {
+    font-size: 20px;
+}
+
+.ai-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00b4d8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex: 1;
+}
+
+.ai-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.ai-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.ai-message-text {
+    color: #e0e0e0;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.ai-message-text p {
+    margin: 0 0 4px 0;
+}
+
+.ai-message-text p:first-child {
+    color: #fff;
+    font-weight: 500;
+    font-size: 15px;
+    margin-bottom: 8px;
+}
+
+.ai-message-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.ai-btn-primary,
+.ai-btn-secondary {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.ai-btn-primary {
+    background: linear-gradient(135deg, #00b4d8 0%, #0077b6 100%);
+    color: white;
+    flex: 1;
+}
+
+.ai-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 180, 216, 0.3);
+}
+
+.ai-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #aaa;
+}
+
+.ai-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.ai-message-tail {
+    position: absolute;
+    bottom: -8px;
+    left: 30px;
+    width: 16px;
+    height: 16px;
+    background: #1a1a2e;
+    border-right: 1px solid #0f3460;
+    border-bottom: 1px solid #0f3460;
+    transform: rotate(45deg);
+}
+
+.ai-panel {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 200px;
+    height: 200px;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.ai-panel>* {
+    pointer-events: auto;
+}
+
+.history-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.history-indicator button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px;
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+
+.history-indicator.can-undo button:first-child,
+.history-indicator.can-redo button:last-child {
+    opacity: 1;
+    cursor: pointer;
+}
+
+.history-indicator button:hover:not(:disabled) {
+    transform: scale(1.2);
+}
+
+.history-count {
+    color: #666;
+    font-family: monospace;
+    min-width: 40px;
+    text-align: center;
 }
 </style>

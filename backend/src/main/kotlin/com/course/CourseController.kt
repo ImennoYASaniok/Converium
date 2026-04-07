@@ -1,7 +1,6 @@
 package com.course
 
 import com.course.dto.*
-import com.course.models.Course
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -20,10 +19,10 @@ class CourseController(
         @RequestBody dto: CreateCourseDto,
 //        authentication: Authentication
         @RequestHeader("X-User-Id", required = false) userId: Long? = null
-    ): ResponseEntity<Course> {
-        val ownerId = userId ?: 37L // 1L // authentication.name.toLong()
+    ): ResponseEntity<CourseDto> {
+        val ownerId = userId ?: 1L // authentication.name.toLong()
         val course = courseService.createCourse(dto, ownerId)
-        return ResponseEntity.status(HttpStatus.CREATED).body(course)
+        return ResponseEntity.status(HttpStatus.CREATED).body(CourseDto.from(course, true))
     }
 
     @GetMapping("/{courseId}")
@@ -69,6 +68,66 @@ class CourseController(
         val userId = reqUserId ?: 1L // authentication.name.toLong()
         val enrollment = courseService.startCourse(courseId, userId)
         return ResponseEntity.status(HttpStatus.CREATED).body(CourseEnrollmentDto.from(enrollment))
+    }
+
+    @PostMapping("/{courseId}/members")
+    fun addMember(
+        @PathVariable courseId: Long,
+        @RequestBody dto: MemberDto,
+//        authentication: Authentication
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
+    ): ResponseEntity<CourseMembershipDto> {
+        val userId = reqUserId ?: 1L // authentication.name.toLong()
+        val newMember = courseService.addMember(courseId, dto.userId, dto.ability, userId)
+        return ResponseEntity.status(HttpStatus.CREATED).body(CourseMembershipDto.from(newMember))
+    }
+
+    @PutMapping("/{courseId}/members")
+    fun updateMemberAbility(
+        @PathVariable courseId: Long,
+        @RequestBody dto: MemberDto,
+//        authentication: Authentication
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
+    ): ResponseEntity<CourseMembershipDto> {
+        val updaterId = reqUserId ?: 1L // authentication.name.toLong()
+        val updated = courseService.updateMemberAbility(courseId, dto.userId, dto.ability, updaterId)
+        return ResponseEntity.ok(CourseMembershipDto.from(updated))
+    }
+
+    @DeleteMapping("/{courseId}/members/{userId}")
+    fun removeMember(
+        @PathVariable courseId: Long,
+        @PathVariable userId: Long,
+//        authentication: Authentication
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
+    ): ResponseEntity<Void> {
+        val removerId = reqUserId ?: 1L // authentication.name.toLong()
+        courseService.removeMember(courseId, userId, removerId)
+        return ResponseEntity.noContent().build()
+    }
+
+    @GetMapping("/{courseId}/structure")
+    fun getCourseStructure(
+        @PathVariable courseId: Long,
+//        authentication: Authentication
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
+    ): ResponseEntity<CourseGraphDto> {
+        val userId = reqUserId ?: 1L // authentication.name.toLong()
+        val courseStructureDto = courseService.getCourseGraph(courseId, userId)
+        return ResponseEntity.ok(courseStructureDto)
+    }
+
+
+    @PostMapping("/{courseId}/structure")
+    fun updateCourseStructure(
+        @PathVariable courseId: Long,
+        @RequestBody dto: CourseGraphDto,
+//        authentication: Authentication
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
+    ): ResponseEntity.BodyBuilder {
+        val userId = reqUserId ?: 1L // authentication.name.toLong()
+        courseService.updateCourseGraph(courseId, dto, userId)
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
     }
 }
 

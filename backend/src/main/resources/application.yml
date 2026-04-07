@@ -1,11 +1,18 @@
 logging:
   level:
-    root: INFO # DEBUG
+    root: INFO
     com.course: DEBUG
     org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG
   pattern:
     console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000
+
+cors:
+  allowed-origins: http://localhost:5173
 
 user:
   maxFriends: 500

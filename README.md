@@ -137,7 +137,7 @@ docker-compose ps
 
 ## Эндпоинты в postman
 
-Взаимодействия с **course**: https://swer-serafim-2009-3650110.postman.co/workspace/Serafim's-Workspace~0a083094-bf71-4e55-87f4-02d7bb7278b9/request/51983885-171b37be-1641-4c32-9a1a-8dfcf70b2fe7?action=share&creator=51983885&ctx=documentation
+Взаимодействия с **course**: https://swer-serafim-2009-3650110.postman.co/workspace/Serafim's-Workspace~0a083094-bf71-4e55-87f4-02d7bb7278b9/environment/51983885-b237d5e4-9706-4ca2-a7f8-fe1a4df12115?action=share&creator=51983885&active-environment=51983885-b237d5e4-9706-4ca2-a7f8-fe1a4df12115
 
 Взаимодействия с **users**: https://ochenneploxo-7297674.postman.co/workspace/Converium~80f657d7-823e-40ab-94cf-e04e6a716fa6/request/51983849-fa6c0ec0-9bee-4422-94b4-a093f250d604?action=share&creator=51983849&ctx=documentation
 
