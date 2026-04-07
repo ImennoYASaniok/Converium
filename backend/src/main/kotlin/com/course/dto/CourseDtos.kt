@@ -5,6 +5,8 @@ import com.course.models.CourseEnrollment
 import com.course.models.CourseMembership
 import com.course.models.CourseVisibility
 import com.course.models.ModerationStatus
+import com.course.models.Step
+import com.course.models.StepEdge
 import com.course.models.StepType
 import com.course.models.UserAbility
 import com.user.dtos.UserSummaryDto
@@ -68,18 +70,6 @@ data class CourseEnrollmentDto(
     }
 }
 
-data class CreateStepDto(
-    val name: String,
-    val content: String,
-    val type: StepType
-)
-
-data class UpdateStepDto(
-    val name: String?,
-    val content: String?,
-    val type: StepType?
-)
-
 data class CourseGraphDto(
     val steps: List<StepDto>,
     val edges: List<EdgeDto>
@@ -89,15 +79,35 @@ data class StepDto(
     val id: Long,
     val name: String,
     val type: StepType,
-    val content: String? // null если шаг ещё недоступен
-)
+    val content: String?, // null если шаг ещё недоступен
+    val description: String?
+) {
+    companion object {
+        fun from(entity: Step) = StepDto(
+            id = entity.id!!,
+            name = entity.name,
+            type = entity.type,
+            description = entity.description,
+            content = entity.content
+        )
+    }
+}
 
 data class EdgeDto(
     val id: Long,
     val fromStepId: Long,
     val toStepId: Long,
     val requiredScore: Int?
-)
+) {
+    companion object {
+        fun from(entity: StepEdge) = EdgeDto(
+            id = entity.id!!,
+            fromStepId = entity.from.id!!,
+            toStepId = entity.to.id!!,
+            requiredScore = entity.requiredScore
+        )
+    }
+}
 
 data class MemberDto(
     val userId: Long,

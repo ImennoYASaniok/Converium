@@ -1,8 +1,6 @@
 package com.course
 
 import com.course.dto.*
-import com.course.models.Course
-import com.course.models.CourseMembership
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -106,6 +104,30 @@ class CourseController(
         val removerId = reqUserId ?: 1L // authentication.name.toLong()
         courseService.removeMember(courseId, userId, removerId)
         return ResponseEntity.noContent().build()
+    }
+
+    @GetMapping("/{courseId}/structure")
+    fun getCourseStructure(
+        @PathVariable courseId: Long,
+//        authentication: Authentication
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
+    ): ResponseEntity<CourseGraphDto> {
+        val userId = reqUserId ?: 1L // authentication.name.toLong()
+        val courseStructureDto = courseService.getCourseGraph(courseId, userId)
+        return ResponseEntity.ok(courseStructureDto)
+    }
+
+
+    @PostMapping("/{courseId}/structure")
+    fun updateCourseStructure(
+        @PathVariable courseId: Long,
+        @RequestBody dto: CourseGraphDto,
+//        authentication: Authentication
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
+    ): ResponseEntity.BodyBuilder {
+        val userId = reqUserId ?: 1L // authentication.name.toLong()
+        courseService.updateCourseGraph(courseId, dto, userId)
+        return ResponseEntity.status(HttpStatus.NO_CONTENT)
     }
 }
 

@@ -8,13 +8,10 @@ import com.course.repositories.CourseRepository
 import com.course.repositories.StepEdgeRepository
 import com.course.repositories.StepRepository
 import com.user.dtos.UserSummaryDto
-import com.user.models.User
-//import com.notification.TelegramModerationService
 import com.user.repositories.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.nio.file.AccessDeniedException
 import java.time.Instant
 
 @Service
@@ -55,16 +52,15 @@ class CourseService(
         )
 
         val savedCourse = courseRepository.save(course)
-        if (dto.visibility != CourseVisibility.PUBLIC) {
-            val ownerMembership = CourseMembership(
-                course = savedCourse,
-                user = owner,
-                ability = UserAbility.ADMIN,
-                grantedBy = owner
-            )
-            courseMembershipRepository.save(ownerMembership)
-        }
 
+        // Даже если PUBLIC, нужно хранить админов и т.д.
+        val ownerMembership = CourseMembership(
+            course = savedCourse,
+            user = owner,
+            ability = UserAbility.ADMIN,
+            grantedBy = owner
+        )
+        courseMembershipRepository.save(ownerMembership)
 
 
         logger.info("Курс создан, id={}", savedCourse.id)
@@ -76,7 +72,7 @@ class CourseService(
         val course = courseRepository.findById(courseId)
             .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
 
-        if (!canEdit(course, userId) and !canView(course, userId)) {
+        if (!canView(course, userId)) {
             throw RuntimeException("Нет прав для просмотра курса")
         }
 
@@ -248,39 +244,59 @@ class CourseService(
 
 
 
-    fun addStep(courseId: Long, dto: CreateStepDto, requesterId: Long): Step {
-        return TODO("Provide the return value")
+    @Transactional
+    fun getCourseGraph(courseId: Long, requesterId: Long): CourseGraphDto {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
+        if (canView(course, requesterId)) {
+            throw RuntimeException("Нет прав для просмотра курса")
+        }
+
+        return CourseGraphDto(
+            steps = (course.steps).map { step -> StepDto.from(step) },
+            edges = (course.edges).map { edge -> EdgeDto.from(edge) }
+        )
     }
+    @Transactional
+    fun updateCourseGraph(courseId: Long, dto: CourseGraphDto, requesterId: Long)  {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
 
-    fun updateStep(stepId: Long, dto: UpdateStepDto, requesterId: Long): Step {
-        return TODO("Provide the return value")
-    }
+        if (!canEdit(course, requesterId)) {
+            throw RuntimeException("Нет прав на изменение курса")
+        }
 
-    fun removeStep(stepId: Long, requesterId: Long) {}
+        course.steps.clear()
+        dto.steps.forEach { step ->
+            step.let { course.steps.add(stepFrom(step, course))}
+        }
 
-    fun addEdge(courseId: Long, fromStepId: Long, toStepId: Long, requiredScore: Int?, requesterId: Long): StepEdge {
-        return TODO("Provide the return value")
-    }
+        course.edges.clear()
+        dto.edges.forEach { edge ->
+            edge.let { course.edges.add(
+                StepEdge(
+                    from = stepFrom((dto.steps).first { dto -> dto.id == it.fromStepId }, course),
+                    to = stepFrom((dto.steps).first { dto -> dto.id == it.toStepId }, course),
+                    course = course,
+                    requiredScore = it.requiredScore
+                )
+            ) }
+        }
 
-    fun removeEdge(edgeId: Long, requesterId: Long) {}
-
-    fun getCourseGraph(courseId: Long, requesterId: Long): CourseGraphDto { // шаги + рёбра
-        return TODO("Provide the return value")
+        course.updatedAt = Instant.now()
+        courseRepository.save(course)
     }
 
 
     private fun canView(course: Course, userId: Long): Boolean {
         if (userId == course.owner.id) return true
+        if (isMember(course, userId)) return true
         return when (course.visibility) {
             CourseVisibility.PUBLIC -> course.moderationStatus == ModerationStatus.APPROVED
             CourseVisibility.FRIENDS_ONLY -> {
-                val isOwner = course.owner.id == userId
-                if (isOwner) return true
-
-                val isFriend = userRepository.areFriends(course.owner.id!!, userId)
-                isFriend || isMember(course, userId)
+                userRepository.areFriends(course.owner.id, userId)
             }
-            CourseVisibility.CERTAIN_PEOPLE -> isMember(course, userId)
+            else -> false
         }
     }
 
@@ -300,10 +316,6 @@ class CourseService(
         return courseMembershipRepository.existsByCourseIdAndUserId(course.id!!, userId)
     }
 
-    private fun getUserAbility(course: Course, userId: Long): UserAbility? {
-        return TODO("Provide the return value")
-    }
-
     fun toDto(course: Course, userId: Long): CourseDto = CourseDto(
         id = course.id!!,
         title = course.title,
@@ -315,4 +327,13 @@ class CourseService(
         memberCount = course.memberships.size,
         enrolledCount = course.enrollments.size
     )
+    private fun stepFrom(dto: StepDto, course: Course): Step {
+        return Step(
+            name = dto.name,
+            description = dto.description,
+            content = dto.content!!,
+            course = course,
+            type = dto.type
+        )
+    }
 }

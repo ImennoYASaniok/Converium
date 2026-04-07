@@ -8,17 +8,33 @@ const STORAGE_KEY = 'course_editor_data'
 const STORAGE_VERSION = '1.0'
 const HISTORY_LIMIT = 50
 
-NProgress.configure({ easing: 'linear', speed: 200, trickleSpeed: 200, showSpinner: false });
+try {
+    NProgress.configure({ easing: 'linear', speed: 200, trickleSpeed: 120, showSpinner: false });
+} catch { }
 
 export default {
     name: 'CourseEditor',
+
+    props: {
+        courseId: {
+            type: Number,
+            required: true
+        },
+        courseName: {
+            type: String,
+            default: 'Новый курс'
+         }
+    },
+
     components: {
         JsonEditor,
         AIIcon,
         StepEditor,
     },
+
     data() {
         return {
+
             isRequesting: false,
 
             canvasOffset: { x: 0, y: 0 },
@@ -76,6 +92,7 @@ export default {
             lastAppliedJson: '',
             jsonError: '',
 
+            isAiActive: false,
             aiMessage: {
                 content: '',
                 visible: false,
@@ -759,8 +776,8 @@ export default {
                 this.isRequesting = true
                 NProgress.start()
                 const payload = {
-                    steps: this.steps.map(s => ({ ...s})),
-                    edges: this.edges.map(e => ({ ...e}))
+                    steps: this.steps.map(s => ({ ...s })),
+                    edges: this.edges.map(e => ({ ...e }))
                 }
 
                 await courseApi.saveStructure(this.courseId, payload)
@@ -1097,6 +1114,7 @@ export default {
                 steps: this.steps.map(s => ({
                     id: parseInt(s.id),
                     name: s.name,
+                    description: s.description,
                     content: s.content,
                     type: s.type,
                     x: s.x,
@@ -1227,7 +1245,7 @@ export default {
                     y: s.y,
                     isInitial: s.isInitial
                 })),
-                edges: Object.values(map)
+                edges: Object.values(edges)
             }
         },
         canUndo() {
@@ -1255,9 +1273,7 @@ export default {
 
         document.addEventListener('click', this.hideContextMenus)
         window.addEventListener('keydown', this.handleKeyDown)
-        window.addEventListener('beforeunload', () => {
-            this.saveToStorage()
-        })
+        window.addEventListener('beforeunload', this.saveToStorage)
 
 
     },
@@ -1273,14 +1289,14 @@ export default {
         }
     },
 
-    beforeDestroy() {
+    beforeUnmount() {
         if (this.saveTimeout) {
             clearTimeout(this.saveTimeout)
         }
-        confirm("Запомнить текущее состояние?")
         this.saveToStorage()
         document.removeEventListener('click', this.hideContextMenus)
         window.removeEventListener('keydown', this.handleKeyDown)
+        window.removeEventListener('beforeunload', this.saveToStorage)
     }
 
 }
@@ -1485,8 +1501,8 @@ export default {
             </ul>
         </div>
     </div>
-    <StepEditor :visible="stepEditor.visible" :step-id="stepEditor.step?.id"
-        :step-name="stepEditor.step?.name" :step-type="stepEditor.step?.type" :content="stepEditor.step?.content"
+    <StepEditor :visible="stepEditor.visible" :step-id="stepEditor.step?.id" :step-name="stepEditor.step?.name"
+        :step-type="stepEditor.step?.type" :content="stepEditor.step?.content"
         :origin-position="stepEditor.originPosition" @close="stepEditor.visible = false" @save="saveStepContent" />
 </template>
 
@@ -1592,11 +1608,13 @@ export default {
 }
 
 
-.btn-save:disabled, .btn-save:hover:disabled {
+.btn-save:disabled,
+.btn-save:hover:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     pointer-events: none;
 }
+
 .btn-save:hover {
     background: #45a049;
     transform: translateY(-1px);

@@ -1,9 +1,7 @@
 <script>
 // import { RouterLink, RouterView } from 'vue-router'
-import { ref } from 'vue'
 import CourseEditor from './components/course/CourseEditor.vue';
 
-const isLoading = ref(false)
 
 export default {
   components: {
@@ -27,7 +25,7 @@ export default {
 </script>
 
 <template>
-  <CourseEditor></CourseEditor>
+  <CourseEditor :courseId="5"></CourseEditor>
 </template>
 
 <style scoped>

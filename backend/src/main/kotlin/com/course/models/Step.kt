@@ -13,6 +13,9 @@ data class Step(
     var name: String,
 
     @Column(columnDefinition = "TEXT")
+    var description: String?,
+
+    @Column(columnDefinition = "TEXT")
     var content: String,
 
     @ManyToOne(fetch = FetchType.LAZY)
