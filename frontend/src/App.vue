@@ -1,12 +1,8 @@
 <script>
-// import { RouterLink, RouterView } from 'vue-router'
-import CourseEditor from './components/course/CourseEditor.vue';
-
+import { RouterLink, RouterView } from 'vue-router'
 
 export default {
-  components: {
-    CourseEditor
-  },
+  components: {},
 
   data() {
     return {
@@ -25,7 +21,7 @@ export default {
 </script>
 
 <template>
-  <CourseEditor :courseId="5"></CourseEditor>
+  <RouterView />
 </template>
 
 <style scoped>
