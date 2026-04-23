@@ -27,4 +27,4 @@ jobs:
 
       - name: Build with Gradle
         working-directory: ./backend
-        run: ./gradlew build --no-daemon
+        run: ./gradlew build --no-daemon -Dspring.profiles.active=test
