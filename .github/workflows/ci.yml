@@ -26,4 +26,5 @@ jobs:
           gradle-version: wrapper
 
       - name: Build with Gradle
+        working-directory: ./backend
         run: ./gradlew build --no-daemon
