@@ -14,7 +14,6 @@
 - [Быстрый старт](#быстрый-старт)
 - [Технологический стек](#технологический-стек)
 - [Предварительные требования](#предварительные-требования)
-- [Полезные команды](#полезные-команды)
 - [Эндпоинты в postman](#эндпоинты-в-postman)
 - [Roadmap](#roadmap)
 - [Контакты](#контакты)
@@ -54,6 +53,11 @@ git clone https://github.com/ImennoYASaniok/Converium.git
 cd converium
 ```
 
+Включить git hooks (проверка формата коммитов)
+```bash
+git config core.hooksPath githooks
+```
+
 Запуск backend (включая бд)
 ```bash
 docker-compose up -d --build
@@ -74,65 +78,6 @@ docker-compose up -d --build
 
 - Установленные [Docker](https://docs.docker.com/get-docker/) и [docker-compose](https://docs.docker.com/compose/install/)
 - Установленный [Git](https://git-scm.com/downloads)
-
-
-## Полезные команды
-
-### Создание и запуск
-
-Принудительное пересоздание контейнеров:
-```bash
-docker-compose up --force-recreate
-```
-
-Запуск только приложения (без зависимостей):
-```bash
-docker-compose up --no-deps app
-```
-
-Запуск только бд:
-```bash
-docker-compose up -d db
-```
-
-### Остановка и удаление контейнеров
-
-Остановка с удалением контейнеров:
-```bash
-docker-compose down
-```
-
-Остановка с удалением контейнеров и томов (volumes):
-```bash
-docker-compose down -v
-```
-
-Остановка с удалением контейнеров, томов (volumes) и контейнеров старых версий:
-```bash
-docker-compose down -v --remove-orphans
-```
-
-Остановка без удаления контейнеров:
-```bash
-docker-compose stop
-```
-
-### Просмотр и отладка
-
-Логи всех сервисов:
-```bash
-docker-compose logs
-```
-
-Логи приложения в реальном времени:
-```bash
-docker-compose logs -f app
-```
-
-Список запущенных контейнеров:
-```bash
-docker-compose ps
-```
 
 
 ## Эндпоинты в postman
