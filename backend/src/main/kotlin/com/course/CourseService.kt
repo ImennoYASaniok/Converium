@@ -30,7 +30,7 @@ class CourseService(
         logger.info("Создание курса '{}' пользователем {}...", dto.title, ownerId)
 
         require(dto.title.isNotBlank()) { "Заголовок не может быть пустым" }
-        require(dto.title.length <= 200) { "Заголовок слишком длинный (муксимум - 200 символов)" }
+        require(dto.title.length <= 200) { "Заголовок слишком длинный (максимум - 200 символов)" }
         dto.description?.let {
             require(it.length <= 5000) { "Описание слишком длинное (максимум - 5000 символов)" }
         }

@@ -1,0 +1,64 @@
+name: Commit message style
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  commit-style:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REGEX='^(fix|feat|refactor|perf|docs|test|chore|build|ci)\((backend|frontend|db|infra|deps|config|core|multi)\): .+$'
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            # For push events, validate commits in the pushed range
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          fi
+
+          echo "Base: $BASE_SHA"
+          echo "Head: $HEAD_SHA"
+
+          COMMITS=$(git rev-list "$BASE_SHA".."$HEAD_SHA")
+
+          if [[ -z "${COMMITS}" ]]; then
+            echo "No commits to validate."
+            exit 0
+          fi
+
+          FAILED=0
+          while IFS= read -r sha; do
+            msg=$(git log -1 --pretty=%s "$sha")
+            if [[ ! "$msg" =~ $REGEX ]]; then
+              echo "Invalid commit: $sha"
+              echo "  message: $msg"
+              FAILED=1
+            fi
+          done <<< "$COMMITS"
+
+          if [[ "$FAILED" -ne 0 ]]; then
+            echo "Commit message validation failed."
+            echo "Expected format: тип(модуль): описание"
+            echo "Examples: feat(frontend): добавил страницу входа в систему"
+            exit 1
+          fi
+
+          echo "All commit messages are valid."
