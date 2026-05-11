@@ -20,6 +20,10 @@ class UserService(
     private val passwordEncoder: PasswordEncoder,
     private val userProperties: UserProperties
 ) {
+    companion object {
+        private val AVAILABLE_THEMES = setOf("light", "dark", "graphite", "amber")
+    }
+
     private fun validatePassword(password: String) {
         require(password.length >= userProperties.minLenPassword) {
             "Пароль должен быть не менее ${userProperties.minLenPassword} символов"
@@ -41,6 +45,14 @@ class UserService(
         return userRepository.findById(id).orElseThrow { IllegalArgumentException("Пользователь не найден") }
     }
 
+    private fun normalizeAndValidateTheme(theme: String): String {
+        val normalizedTheme = theme.trim().lowercase()
+        require(normalizedTheme in AVAILABLE_THEMES) {
+            "Недопустимая тема. Доступные: ${AVAILABLE_THEMES.joinToString(", ")}"
+        }
+        return normalizedTheme
+    }
+
     fun createUser(request: CreateUserRequest): UserDto {
         require(!userRepository.existsByLogin(request.login)) { "Логин уже создан" }
         require(!userRepository.existsByEmail(request.email)) { "Email уже создан" }
@@ -52,6 +64,7 @@ class UserService(
             login = request.login,
             password = passwordEncoder.encode(request.password),
             email = request.email,
+            theme = request.theme?.let { normalizeAndValidateTheme(it) } ?: "light",
             profilePicture = request.profilePicture ?: "",
             name = request.name ?: "",
             surname = request.surname ?: "",
@@ -81,6 +94,9 @@ class UserService(
         request.email?.let { newEmail ->
             require(!userRepository.existsByEmail(newEmail) || user.email == newEmail) { "Email уже используется" }
             user.email = newEmail
+        }
+        request.theme?.let { newTheme ->
+            user.theme = normalizeAndValidateTheme(newTheme)
         }
         request.profilePicture?.let { user.profilePicture = it }
         request.name?.let { user.name = it }
@@ -267,6 +283,7 @@ class UserService(
             id = userId,
             login = user.login,
             email = user.email,
+            theme = user.theme,
             profilePicture = user.profilePicture,
             name = user.name,
             surname = user.surname,

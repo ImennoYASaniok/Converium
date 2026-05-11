@@ -3,6 +3,8 @@ FROM gradle:7.6-jdk17 AS build
 WORKDIR /home/gradle/src
 
 COPY gradlew gradle build.gradle.kts settings.gradle.kts ./
+COPY gradle ./gradle
+RUN sed -i 's/\r$//' gradlew
 RUN chmod +x gradlew
 RUN ./gradlew dependencies --no-daemon
 
