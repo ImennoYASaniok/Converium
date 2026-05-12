@@ -22,11 +22,9 @@ user:
   minLenPassword: 5
   enablePasswordDigitsValidation: true
 
-# Database configuration
 spring:
   datasource:
     url: jdbc:postgresql://converium_db:5432/${DB_NAME}
 
-# Disable TestUserRunner
 test-user-runner:
   enabled: false

@@ -53,8 +53,7 @@ export default {
   <section class="page">
     <h1 class="page-title">{{ content.title }}</h1>
     <div class="split-line" />
-    <p>{{ content.description }}</p>
-    <p></p>
+    <p style="margin-bottom: 20px;">{{ content.description }}</p>
     <div class="action-row">
       <router-link class="path-button" to="/">На главную</router-link>
     </div>

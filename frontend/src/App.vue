@@ -34,6 +34,7 @@ export default {
 </script>
 
 <template>
+  <div style="margin-bottom: 30px;"></div>
   <AppHeader />
   <main>
     <RouterView />

@@ -155,39 +155,3 @@ export default {
     </div>
   </section>
 </template>
-
-<style scoped>
-.avatar-file-input {
-  display: none;
-}
-
-.avatar-square {
-  position: relative;
-  width: min(360px, 100%);
-  aspect-ratio: 1 / 1;
-  border: 2px solid var(--line);
-  background: var(--surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-center-button {
-  position: absolute;
-}
-
-.avatar-bottom-actions {
-  position: absolute;
-  left: 10px;
-  bottom: 10px;
-  display: flex;
-  gap: 8px;
-}
-</style>

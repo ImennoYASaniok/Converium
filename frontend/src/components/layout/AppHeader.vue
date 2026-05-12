@@ -2,12 +2,14 @@
 import { useAuthStore } from '../../stores/auth'
 import { usersApi } from '../../api/users_api'
 import userIcon from '../../assets/imgs/user_icon.png'
+import logo from '../../assets/imgs/logo.png'
 
 export default {
   data() {
     return {
       menuOpen: false,
       profilePicture: '',
+      headerLineScale: 1,
     }
   },
   computed: {
@@ -20,13 +22,19 @@ export default {
     avatarSrc() {
       return this.profilePicture || userIcon
     },
+    logoSrc() {
+      return logo
+    },
   },
   async mounted() {
     document.addEventListener('click', this.onDocumentClick)
+    window.addEventListener('scroll', this.onScroll, { passive: true })
+    this.onScroll()
     await this.refreshProfilePicture()
   },
   beforeUnmount() {
     document.removeEventListener('click', this.onDocumentClick)
+    window.removeEventListener('scroll', this.onScroll)
   },
   watch: {
     isAuthenticated: {
@@ -56,6 +64,12 @@ export default {
         this.menuOpen = false
       }
     },
+    onScroll() {
+      const shrinkDistancePx = 120
+      const y = window.scrollY || 0
+      const scale = 1 - y / shrinkDistancePx
+      this.headerLineScale = Math.max(0, Math.min(1, scale))
+    },
     async refreshProfilePicture() {
       if (!this.isAuthenticated) {
         this.profilePicture = ''
@@ -81,9 +95,11 @@ export default {
 
 <template>
   <header class="site-header">
-    <nav class="header-nav">
+    <nav class="header-nav" :style="{ '--header-line-scale': headerLineScale }">
       <div class="header-group">
-        <router-link class="header-button" to="/">Главная</router-link>
+        <router-link class="header-button" to="/">
+          <img :src="logoSrc" alt="Главная" class="logo-image" />
+        </router-link>
         <router-link class="header-button" to="/about">О нас</router-link>
       </div>
 
@@ -94,54 +110,17 @@ export default {
           </button>
 
           <div v-if="menuOpen" class="user-dropdown">
-            <router-link class="header-button" to="/profile" @click="closeMenu">Профиль</router-link>
-            <router-link class="header-button" to="/settings" @click="closeMenu">Настройки</router-link>
-            <button class="header-button" type="button" @click="logout">Выйти</button>
+            <router-link class="header-button user-dropdown-button" type="button" to="/profile" @click="closeMenu">Профиль</router-link>
+            <router-link class="header-button user-dropdown-button" type="button" to="/settings" @click="closeMenu">Настройки</router-link>
           </div>
         </div>
 
-        <template v-else>
+        <div v-else class="header-group">
           <router-link class="header-button" to="/login">Войти</router-link>
           <router-link class="header-button" to="/register">Регистрация</router-link>
-        </template>
+        </div>
       </div>
     </nav>
   </header>
 </template>
 
-<style scoped>
-.user-menu {
-  position: relative;
-}
-
-.avatar-button {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 2px solid var(--line);
-  background: var(--accent);
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.user-dropdown {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 160px;
-  padding: 10px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  background: var(--surface-color, #ffffff);
-  z-index: 50;
-}
-</style>

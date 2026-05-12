@@ -32,22 +32,44 @@ class JwtTokenProvider(
         if (!constantTimeEquals(sigB64, expectedSigB64)) return false
 
         val payload = String(base64UrlDecode(payloadB64), StandardCharsets.UTF_8)
-        val payloadParts = payload.split(':')
-        if (payloadParts.size != 3) return false
+        // Разбираем payload: userId:login:expiresAt
+        // Используем lastIndexOf чтобы правильно обработать login с символами ':'
+        val lastColonIndex = payload.lastIndexOf(':')
+        if (lastColonIndex == -1) return false
 
-        val expiresAt = payloadParts[2].toLongOrNull() ?: return false
+        val expiresAtStr = payload.substring(lastColonIndex + 1)
+        val expiresAt = expiresAtStr.toLongOrNull() ?: return false
+
+        // Находим предпоследний ':' для разделения userId и login
+        val secondLastColonIndex = payload.lastIndexOf(':', lastColonIndex - 1)
+        if (secondLastColonIndex == -1) return false
+
+        val userIdStr = payload.substring(0, secondLastColonIndex)
+        val login = payload.substring(secondLastColonIndex + 1, lastColonIndex)
+
+        // Проверяем, что userId - это число
+        userIdStr.toLongOrNull() ?: return false
         return Instant.now().toEpochMilli() <= expiresAt
     }
 
     fun getUserIdFromToken(token: String): Long {
+        if (!validateToken(token)) {
+            throw IllegalArgumentException("Invalid or expired token")
+        }
+
         val parts = token.split('.')
         require(parts.size == 2) { "Invalid token" }
 
         val payload = String(base64UrlDecode(parts[0]), StandardCharsets.UTF_8)
-        val payloadParts = payload.split(':')
-        require(payloadParts.size == 3) { "Invalid token" }
+        // Разбираем payload: userId:login:expiresAt
+        val lastColonIndex = payload.lastIndexOf(':')
+        require(lastColonIndex != -1) { "Invalid token" }
 
-        return payloadParts[0].toLong()
+        val secondLastColonIndex = payload.lastIndexOf(':', lastColonIndex - 1)
+        require(secondLastColonIndex != -1) { "Invalid token" }
+
+        val userIdStr = payload.substring(0, secondLastColonIndex)
+        return userIdStr.toLong()
     }
 
     private fun hmacSha256(data: String): ByteArray {

@@ -1,0 +1,9 @@
+.site-footer {
+  border-top: 2px solid var(--line);
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  background: var(--bg);
+  font-size: 14px;
+}

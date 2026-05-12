@@ -12,6 +12,11 @@ export default {
       profile: null,
     }
   },
+  computed: {
+    avatarSrc() {
+      return this.profile?.profilePicture || userIcon
+    },
+  },
   methods: {
     logout() {
       const auth = useAuthStore()
@@ -48,13 +53,11 @@ export default {
 
     <div v-else class="profile-grid">
       <div class="avatar-square profile-item">
-        <img :src="profile.profilePicture || userIcon" alt="Аватар" class="avatar-image" />
+        <img :src="avatarSrc" alt="Аватар" class="avatar-image" />
       </div>
 
-      <p class="profile-item"><strong>ID:</strong> {{ profile.id }}</p>
       <p class="profile-item"><strong>Логин:</strong> {{ profile.login }}</p>
       <p class="profile-item"><strong>Email:</strong> {{ profile.email }}</p>
-      <p class="profile-item"><strong>Тема:</strong> {{ profile.theme }}</p>
       <p class="profile-item"><strong>Имя:</strong> {{ profile.name }}</p>
       <p class="profile-item"><strong>Фамилия:</strong> {{ profile.surname }}</p>
       <p class="profile-item"><strong>Описание:</strong> {{ profile.description }}</p>
@@ -70,19 +73,4 @@ export default {
   </section>
 </template>
 
-<style scoped>
-.avatar-square {
-  width: min(360px, 100%);
-  aspect-ratio: 1 / 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-</style>
+<style scoped src="../assets/styles/profile/profile.css"></style>

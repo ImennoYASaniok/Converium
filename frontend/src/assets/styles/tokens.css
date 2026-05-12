@@ -1,0 +1,58 @@
+@font-face {
+  font-family: 'JetBrainsMonoCustom';
+  src: url('../fonts/JetBrainsMono.ttf') format('truetype');
+  font-weight: 100 800;
+  font-style: normal;
+}
+
+:root {
+  --bg: #e8e8e8;
+  --panel: #f4f4f4;
+  --accent: #ffd900;
+  --text: #111111;
+  --line: #111111;
+  --surface: #ffffff;
+  --input-focus: #fffbe0;
+  --success-bg: #dbffd6;
+  --error-bg: #ffd6d6;
+  --link-hover: #7a5f00;
+}
+
+html[data-theme='dark'] {
+  --bg: #111111;
+  --panel: #1b1b1b;
+  --accent: #ffd900;
+  --text: #efefef;
+  --line: #efefef;
+  --surface: #171717;
+  --input-focus: #2a2a18;
+  --success-bg: #16321a;
+  --error-bg: #3a1616;
+  --link-hover: #ffd900;
+}
+
+html[data-theme='graphite'] {
+  --bg: #272a30;
+  --panel: #30343a;
+  --accent: #76d1ff;
+  --text: #f3f6ff;
+  --line: #f3f6ff;
+  --surface: #2a2e34;
+  --input-focus: #36404a;
+  --success-bg: #224136;
+  --error-bg: #523035;
+  --link-hover: #76d1ff;
+}
+
+html[data-theme='amber'] {
+  --bg: #19140a;
+  --panel: #241a0d;
+  --accent: #ffb300;
+  --text: #fff0d1;
+  --line: #fff0d1;
+  --surface: #1f170b;
+  --input-focus: #3a2a0e;
+  --success-bg: #294722;
+  --error-bg: #4b1f1f;
+  --link-hover: #ffb300;
+}

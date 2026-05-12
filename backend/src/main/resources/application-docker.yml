@@ -9,6 +9,5 @@ spring:
       ddl-auto: update
     show-sql: true
 
-# Disable TestUserRunner
 test-user-runner:
   enabled: false
