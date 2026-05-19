@@ -3,8 +3,7 @@ import { authApi } from '../api/auth_api'
 import { usersApi } from '../api/users_api'
 import { useAuthStore } from '../stores/auth'
 import { useThemeStore } from '../stores/theme'
-import eyeCloseIcon from '../assets/imgs/eye/eye_close.png'
-import eyeOpenIcon from '../assets/imgs/eye/eye_open.png'
+import AppIcon from '../components/AppIcon.vue'
 
 export default {
   name: 'RegisterView',
@@ -19,8 +18,6 @@ export default {
       showConfirmPassword: false,
       
       // Иконки глаз
-      eyeCloseIcon,
-      eyeOpenIcon,
       
       // Шаг 2: Персональные данные
       name: '',
@@ -31,6 +28,9 @@ export default {
       error: '',
       loading: false,
     }
+  },
+  components: {
+    AppIcon,
   },
   methods: {
     validateLogin() {
@@ -186,11 +186,7 @@ export default {
             class="password-toggle"
             @click="showPassword = !showPassword"
           >
-            <img 
-              :src="showPassword ? eyeOpenIcon : eyeCloseIcon" 
-              alt="Показать/скрыть пароль"
-              class="eye-icon"
-            />
+            <AppIcon :name="showPassword ? 'eye/eye_open' : 'eye/eye_close'" class="eye-icon" />
           </button>
         </div>
       </div>
@@ -212,11 +208,7 @@ export default {
             class="password-toggle"
             @click="showConfirmPassword = !showConfirmPassword"
           >
-            <img 
-              :src="showConfirmPassword ? eyeOpenIcon : eyeCloseIcon" 
-              alt="Показать/скрыть пароль"
-              class="eye-icon"
-            />
+            <AppIcon :name="showConfirmPassword ? 'eye/eye_open' : 'eye/eye_close'" class="eye-icon" />
           </button>
         </div>
       </div>

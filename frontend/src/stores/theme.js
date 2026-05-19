@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { usersApi } from '../api/users_api'
 
-const AVAILABLE_THEMES = ['light', 'dark', 'graphite', 'amber']
+const AVAILABLE_THEMES = ['light', 'vinous', 'graphite', 'amber']
 const DEFAULT_THEME = 'light'
 
 function normalizeTheme(theme) {

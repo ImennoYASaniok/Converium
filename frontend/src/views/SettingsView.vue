@@ -20,7 +20,7 @@ export default {
     themeOptions() {
       return [
         { value: 'light', label: 'Светлая' },
-        { value: 'dark', label: 'Тёмная' },
+        { value: 'vinous', label: 'Бордовая' },
         { value: 'graphite', label: 'Графитовая' },
         { value: 'amber', label: 'Янтарная' },
       ]

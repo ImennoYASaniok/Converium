@@ -16,19 +16,6 @@ export default {
     const auth = useAuthStore()
     const themeStore = useThemeStore()
     themeStore.initTheme()
-
-    if (!auth.userId) {
-      return
-    }
-
-    try {
-      const res = await usersApi.getById(auth.userId)
-      if (res?.data?.theme) {
-        themeStore.applyTheme(res.data.theme)
-      }
-    } catch {
-      themeStore.initTheme()
-    }
   },
 }
 </script>

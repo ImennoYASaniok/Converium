@@ -13,9 +13,7 @@
     </p>
     <p>
       ПОДДЕРЖКА:
-      (<a href="" target="_blank" rel="noopener noreferrer">
-        ссылка
-      </a>)
+      <a href="" target="_blank" rel="noopener noreferrer">ссылка</a>
     </p>
   </footer>
 </template>

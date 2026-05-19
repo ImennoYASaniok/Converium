@@ -23,7 +23,7 @@ class UserService(
         private val userProperties: UserProperties
 ) {
     companion object {
-        private val AVAILABLE_THEMES = setOf("light", "dark", "graphite", "amber")
+        private val AVAILABLE_THEMES = setOf("light", "vinous", "graphite", "amber")
     }
 
     private fun validatePassword(password: String) {

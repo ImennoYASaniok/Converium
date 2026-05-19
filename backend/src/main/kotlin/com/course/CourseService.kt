@@ -30,7 +30,7 @@ class CourseService(
         logger.info("Создание курса '{}' пользователем {}...", dto.title, ownerId)
 
         require(dto.title.isNotBlank()) { "Заголовок не может быть пустым" }
-        require(dto.title.length <= 200) { "Заголовок слишком длинный (максимум - 200 символов)" }
+        require(dto.title.length <= 200) { "Заголовок слишком длинный (муксимум - 200 символов)" }
         dto.description?.let {
             require(it.length <= 5000) { "Описание слишком длинное (максимум - 5000 символов)" }
         }
@@ -76,17 +76,7 @@ class CourseService(
             throw RuntimeException("Нет прав для просмотра курса")
         }
 
-        return CourseDto(
-            id = course.id!!,
-            title = course.title,
-            description = course.description,
-            owner = UserSummaryDto.from(course.owner),
-            visibility = course.visibility,
-            moderationStatus = course.moderationStatus,
-            canEdit = canEdit(course, userId),
-            memberCount = course.memberships.size,
-            enrolledCount = course.enrollments.size
-        )
+        return toDto(course, userId)
     }
     @Transactional
     fun updateCourse(courseId: Long, dto: UpdateCourseDto, requesterId: Long): Course {
@@ -244,11 +234,18 @@ class CourseService(
 
 
 
+    fun getMyCourses(userId: Long): List<CourseDto> {
+        val owned = courseRepository.findByOwnerId(userId)
+        val memberOf = courseRepository.findByMemberUserId(userId)
+        val all = (owned + memberOf).distinctBy { it.id }
+        return all.map { toDto(it, userId) }
+    }
+
     @Transactional
     fun getCourseGraph(courseId: Long, requesterId: Long): CourseGraphDto {
         val course = courseRepository.findById(courseId)
             .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
-        if (canView(course, requesterId)) {
+        if (!canView(course, requesterId)) {
             throw RuntimeException("Нет прав для просмотра курса")
         }
 
@@ -256,6 +253,54 @@ class CourseService(
             steps = (course.steps).map { step -> StepDto.from(step) },
             edges = (course.edges).map { edge -> EdgeDto.from(edge) }
         )
+    }
+    
+    @Transactional(readOnly = true)
+    fun getStep(courseId: Long, stepId: Long, userId: Long): StepDetailDto {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
+        if (!canView(course, userId)) {
+            throw RuntimeException("Нет прав для просмотра курса")
+        }
+        val step = stepRepository.findById(stepId)
+            .orElseThrow { IllegalArgumentException("Шаг не найден: $stepId") }
+        if (step.course.id != courseId) {
+            throw IllegalArgumentException("Шаг не принадлежит курсу")
+        }
+        return StepDetailDto.from(step)
+    }
+
+    @Transactional
+    fun updateStep(courseId: Long, stepId: Long, dto: UpdateStepDto, userId: Long): StepDetailDto {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
+        if (!canEdit(course, userId)) {
+            throw RuntimeException("Нет прав на изменение курса")
+        }
+        val step = stepRepository.findById(stepId)
+            .orElseThrow { IllegalArgumentException("Шаг не найден: $stepId") }
+        if (step.course.id != courseId) {
+            throw IllegalArgumentException("Шаг не принадлежит курсу")
+        }
+        dto.name?.let { step.name = it }
+        dto.description?.let { step.description = it }
+        dto.content?.let { step.content = it }
+        return StepDetailDto.from(stepRepository.save(step))
+    }
+
+    @Transactional
+    fun deleteStep(courseId: Long, stepId: Long, userId: Long) {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { IllegalArgumentException("Курс не найден: $courseId") }
+        if (!canEdit(course, userId)) {
+            throw RuntimeException("Нет прав на изменение курса")
+        }
+        val step = stepRepository.findById(stepId)
+            .orElseThrow { IllegalArgumentException("Шаг не найден: $stepId") }
+        if (step.course.id != courseId) {
+            throw IllegalArgumentException("Шаг не принадлежит курсу")
+        }
+        stepRepository.delete(step)
     }
     @Transactional
     fun updateCourseGraph(courseId: Long, dto: CourseGraphDto, requesterId: Long)  {
@@ -325,7 +370,9 @@ class CourseService(
         moderationStatus = course.moderationStatus,
         canEdit = canEdit(course, userId),
         memberCount = course.memberships.size,
-        enrolledCount = course.enrollments.size
+        enrolledCount = course.enrollments.size,
+        createdAt = course.createdAt,
+        updatedAt = course.updatedAt
     )
     private fun stepFrom(dto: StepDto, course: Course): Step {
         return Step(

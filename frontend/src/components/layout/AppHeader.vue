@@ -1,8 +1,6 @@
 <script>
 import { useAuthStore } from '../../stores/auth'
-import { usersApi } from '../../api/users_api'
-import userIcon from '../../assets/imgs/user_icon.png'
-import logo from '../../assets/imgs/logo.png'
+import AppIcon from '../AppIcon.vue'
 
 export default {
   data() {
@@ -20,10 +18,7 @@ export default {
       return this.auth.isAuthenticated
     },
     avatarSrc() {
-      return this.profilePicture || userIcon
-    },
-    logoSrc() {
-      return logo
+      return this.profilePicture
     },
   },
   async mounted() {
@@ -71,24 +66,11 @@ export default {
       this.headerLineScale = Math.max(0, Math.min(1, scale))
     },
     async refreshProfilePicture() {
-      if (!this.isAuthenticated) {
-        this.profilePicture = ''
-        return
-      }
-
-      const userId = this.auth.userId
-      if (!userId) {
-        this.profilePicture = ''
-        return
-      }
-
-      try {
-        const res = await usersApi.getById(userId)
-        this.profilePicture = res?.data?.profilePicture || ''
-      } catch {
-        this.profilePicture = ''
-      }
+      this.profilePicture = ''
     },
+  },
+  components: {
+    AppIcon,
   },
 }
 </script>
@@ -98,7 +80,7 @@ export default {
     <nav class="header-nav" :style="{ '--header-line-scale': headerLineScale }">
       <div class="header-group">
         <router-link class="header-button" to="/">
-          <img :src="logoSrc" alt="Главная" class="logo-image" />
+          <AppIcon name="logo" class="logo-image" />
         </router-link>
         <router-link class="header-button" to="/about">О нас</router-link>
       </div>
@@ -106,7 +88,8 @@ export default {
       <div class="header-group">
         <div v-if="isAuthenticated" class="user-menu">
           <button class="avatar-button" type="button" @click="toggleMenu">
-            <img class="avatar-image" :src="avatarSrc" alt="Пользователь" />
+            <img v-if="avatarSrc" class="avatar-image" :src="avatarSrc" alt="Пользователь" />
+            <AppIcon v-else name="user_icon" class="avatar-image" :size="'100%'" />
           </button>
 
           <div v-if="menuOpen" class="user-dropdown">

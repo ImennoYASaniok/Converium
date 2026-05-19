@@ -7,3 +7,7 @@
   background: var(--bg);
   font-size: 14px;
 }
+
+:root {
+  --site-footer-height: 72px;
+}

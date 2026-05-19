@@ -25,12 +25,17 @@ api.interceptors.response.use(
     const status = error?.response?.status
     const currentPath = router.currentRoute.value.path
 
-    if (status === 401) {
+    if (status === 401 || status === 403) {
       const auth = useAuthStore()
       auth.logout()
+      localStorage.removeItem('accessToken')
+      
+      if (!currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
+        router.push('/login')
+      }
     }
 
-    const redirectStatuses = [401, 403, 404, 500, 502, 503]
+    const redirectStatuses = [404, 500, 502, 503]
     if (redirectStatuses.includes(status) && !currentPath.startsWith('/error/')) {
       router.push(`/error/${status}`)
     }

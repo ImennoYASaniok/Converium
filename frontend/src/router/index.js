@@ -62,6 +62,20 @@ const router = createRouter({
             props: true
         },
         {
+            path: '/course/:courseId',
+            name: 'CourseView',
+            component: () => import('@/views/CourseView.vue'),
+            meta: { requiresAuth: true },
+            props: true
+        },
+        {
+            path: '/course/:courseId/step/:stepId',
+            name: 'StepView',
+            component: () => import('@/views/StepView.vue'),
+            meta: { requiresAuth: true },
+            props: true
+        },
+        {
             path: '/:pathMatch(.*)*',
             redirect: '/error/404',
         },

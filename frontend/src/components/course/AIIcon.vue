@@ -432,3 +432,49 @@ defineExpose({
     getSize: () => CONFIG.size
 });
 </script>
+
+<style scoped>
+.ai-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+}
+
+button {
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #555;
+}
+
+.ai-container {
+    width: 100%;
+    max-width: 1000px;
+    max-height: 1000px;
+    background: transparent;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+</style>

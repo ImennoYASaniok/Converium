@@ -38,3 +38,13 @@ main {
     flex-wrap: wrap;
   }
 }
+
+::selection {
+  background-color: var(--accent);
+  color: var(--text);
+}
+
+::-moz-selection {
+  background-color: var(--accent);
+  color: var(--text);
+}
