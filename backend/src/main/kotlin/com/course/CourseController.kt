@@ -4,6 +4,7 @@ import com.course.dto.*
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
 
 // Контроллер курса
@@ -13,6 +14,19 @@ import org.springframework.web.bind.annotation.*
 class CourseController(
     private val courseService: CourseService
 ) {
+
+    private fun getCurrentUserId(): Long {
+        val authentication = SecurityContextHolder.getContext().authentication
+        return authentication?.principal as? Long
+                ?: throw IllegalArgumentException("Требуется аутентификация")
+    }
+
+    @GetMapping("/my")
+    fun getMyCourses(): ResponseEntity<List<CourseDto>> {
+        val userId = getCurrentUserId()
+        val courses = courseService.getMyCourses(userId)
+        return ResponseEntity.ok(courses)
+    }
 
     @PostMapping
     fun createCourse(
@@ -129,5 +143,37 @@ class CourseController(
         courseService.updateCourseGraph(courseId, dto, userId)
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
     }
-}
 
+    // --- Step CRUD ---
+
+    @GetMapping("/{courseId}/steps/{stepId}")
+    fun getStep(
+            @PathVariable courseId: Long,
+            @PathVariable stepId: Long
+    ): ResponseEntity<StepDetailDto> {
+        val userId = getCurrentUserId()
+        val stepDto = courseService.getStep(courseId, stepId, userId)
+        return ResponseEntity.ok(stepDto)
+    }
+
+    @PutMapping("/{courseId}/steps/{stepId}")
+    fun updateStep(
+            @PathVariable courseId: Long,
+            @PathVariable stepId: Long,
+            @RequestBody dto: UpdateStepDto
+    ): ResponseEntity<StepDetailDto> {
+        val userId = getCurrentUserId()
+        val updated = courseService.updateStep(courseId, stepId, dto, userId)
+        return ResponseEntity.ok(updated)
+    }
+
+    @DeleteMapping("/{courseId}/steps/{stepId}")
+    fun deleteStep(
+            @PathVariable courseId: Long,
+            @PathVariable stepId: Long
+    ): ResponseEntity<Void> {
+        val userId = getCurrentUserId()
+        courseService.deleteStep(courseId, stepId, userId)
+        return ResponseEntity.noContent().build()
+    }
+}

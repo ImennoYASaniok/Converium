@@ -35,7 +35,9 @@ data class CourseDto(
     val moderationStatus: ModerationStatus?,
     val canEdit: Boolean, // для текущего пользователя
     val memberCount: Int,
-    val enrolledCount: Int
+    val enrolledCount: Int,
+    val createdAt: Instant,
+    val updatedAt: Instant
 ) {
     companion object {
         fun from(entity: Course, canEdit: Boolean): CourseDto {
@@ -48,7 +50,9 @@ data class CourseDto(
                 moderationStatus = entity.moderationStatus,
                 canEdit = canEdit,
                 memberCount = entity.memberships.size,
-                enrolledCount = entity.enrollments.size
+                enrolledCount = entity.enrollments.size,
+                createdAt = entity.createdAt,
+                updatedAt = entity.updatedAt
             )
         }
     }
@@ -92,6 +96,41 @@ data class StepDto(
         )
     }
 }
+
+data class StepDetailDto(
+    val id: Long,
+    val name: String,
+    val type: StepType,
+    val content: String?,
+    val description: String?,
+    val courseId: Long
+) {
+    companion object {
+        fun from(entity: Step): StepDetailDto {
+            return StepDetailDto(
+                id = entity.id!!,
+                name = entity.name,
+                type = entity.type,
+                content = entity.content,
+                description = entity.description,
+                courseId = entity.course.id!!
+            )
+        }
+    }
+}
+
+data class UpdateStepDto(
+    val name: String?,
+    val description: String?,
+    val content: String?
+)
+
+data class CreateStepDto(
+    val name: String,
+    val type: StepType?,
+    val description: String?,
+    val content: String?
+)
 
 data class EdgeDto(
     val id: Long,

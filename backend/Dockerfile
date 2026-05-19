@@ -1,13 +1,13 @@
 # Этап сборки
-FROM gradle:7.6-jdk17 AS build
+FROM gradle:jdk17 AS build
 WORKDIR /home/gradle/src
 
-COPY gradlew gradle build.gradle.kts settings.gradle.kts ./
-RUN chmod +x gradlew
-RUN ./gradlew dependencies --no-daemon
+COPY build.gradle.kts settings.gradle.kts ./
+COPY gradle ./gradle
+RUN gradle dependencies --no-daemon
 
 COPY src ./src
-RUN ./gradlew bootJar --no-daemon --info
+RUN gradle bootJar --no-daemon --info
 
 # Финальный этап
 FROM eclipse-temurin:17-jre-alpine

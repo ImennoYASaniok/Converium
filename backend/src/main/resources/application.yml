@@ -12,7 +12,7 @@ jwt:
   expiration: ${JWT_EXPIRATION:86400000}
 
 cors:
-  allowed-origins: http://localhost:5173
+  allowed-origins: http://localhost:8080,http://localhost:8081,http://localhost
 
 user:
   maxFriends: 500
@@ -21,3 +21,10 @@ user:
   minLenUser: 5
   minLenPassword: 5
   enablePasswordDigitsValidation: true
+
+spring:
+  datasource:
+    url: jdbc:postgresql://converium_db:5432/${DB_NAME}
+
+test-user-runner:
+  enabled: false
