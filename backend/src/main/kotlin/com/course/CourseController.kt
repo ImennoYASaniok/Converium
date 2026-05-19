@@ -4,6 +4,7 @@ import com.course.dto.*
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
 
 // Контроллер курса
@@ -13,6 +14,12 @@ import org.springframework.web.bind.annotation.*
 class CourseController(
     private val courseService: CourseService
 ) {
+
+    private fun getCurrentUserId(): Long {
+        val authentication = SecurityContextHolder.getContext().authentication
+        return authentication?.principal as? Long
+                ?: throw IllegalArgumentException("Требуется аутентификация")
+    }
 
     @GetMapping("/my")
     fun getMyCourses(): ResponseEntity<List<CourseDto>> {
