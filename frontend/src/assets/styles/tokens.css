@@ -6,6 +6,10 @@
 }
 
 :root {
+  --global-radius: 6px;
+  --global-line-width: 2.5px;
+  --global-line-height: 2px;
+
   --bg: #c7bebf;
   --panel: #e6dadc;
   --accent: #b48534;

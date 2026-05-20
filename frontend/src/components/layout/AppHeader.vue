@@ -1,5 +1,6 @@
 <script>
 import { useAuthStore } from '../../stores/auth'
+import { usersApi } from '../../api/users_api'
 import AppIcon from '../AppIcon.vue'
 
 export default {
@@ -26,10 +27,12 @@ export default {
     window.addEventListener('scroll', this.onScroll, { passive: true })
     this.onScroll()
     await this.refreshProfilePicture()
+    window.addEventListener('profile-updated', this.onProfileUpdated)
   },
   beforeUnmount() {
     document.removeEventListener('click', this.onDocumentClick)
     window.removeEventListener('scroll', this.onScroll)
+    window.removeEventListener('profile-updated', this.onProfileUpdated)
   },
   watch: {
     isAuthenticated: {
@@ -66,7 +69,21 @@ export default {
       this.headerLineScale = Math.max(0, Math.min(1, scale))
     },
     async refreshProfilePicture() {
-      this.profilePicture = ''
+      try {
+        const auth = useAuthStore()
+        if (!auth.userId) {
+          this.profilePicture = ''
+          return
+        }
+        const res = await usersApi.getById(auth.userId)
+        this.profilePicture = res.data.profilePicture || ''
+      } catch (e) {
+        this.profilePicture = ''
+      }
+    },
+    onProfileUpdated() {
+      // Re-fetch profile picture when profile is updated elsewhere
+      this.refreshProfilePicture()
     },
   },
   components: {
@@ -79,31 +96,32 @@ export default {
   <header class="site-header">
     <nav class="header-nav" :style="{ '--header-line-scale': headerLineScale }">
       <div class="header-group">
-        <router-link class="header-button" to="/">
+        <router-link class="header-button" type="logo" to="/">
           <AppIcon name="logo" class="logo-image" />
         </router-link>
         <router-link class="header-button" to="/about">О нас</router-link>
+        <router-link class="header-button" to="/users/search">Поиск пользователей</router-link>
       </div>
 
       <div class="header-group">
-        <div v-if="isAuthenticated" class="user-menu">
+        <div v-if="isAuthenticated">
           <button class="avatar-button" type="button" @click="toggleMenu">
             <img v-if="avatarSrc" class="avatar-image" :src="avatarSrc" alt="Пользователь" />
             <AppIcon v-else name="user_icon" class="avatar-image" :size="'100%'" />
           </button>
-
-          <div v-if="menuOpen" class="user-dropdown">
-            <router-link class="header-button user-dropdown-button" type="button" to="/profile" @click="closeMenu">Профиль</router-link>
-            <router-link class="header-button user-dropdown-button" type="button" to="/settings" @click="closeMenu">Настройки</router-link>
-          </div>
         </div>
-
-        <div v-else class="header-group">
+        <div v-else>
           <router-link class="header-button" to="/login">Войти</router-link>
           <router-link class="header-button" to="/register">Регистрация</router-link>
         </div>
       </div>
+
+      <div v-if="menuOpen" class="user-dropdown">
+        <router-link class="header-button" type="button" to="/profile" @click="closeMenu">Профиль</router-link>
+        <router-link class="header-button" type="button" to="/settings" @click="closeMenu">Настройки</router-link>
+      </div>
     </nav>
   </header>
 </template>
+
 

@@ -32,6 +32,31 @@ const router = createRouter({
             meta: { requiresAuth: true },
         },
         {
+            path: '/profile/requests',
+            name: 'FriendRequests',
+            component: () => import('@/views/FriendRequestsList.vue'),
+            meta: { requiresAuth: true },
+        },
+        {
+            path: '/users/search',
+            name: 'UserSearch',
+            component: () => import('@/views/SearchUsers.vue'),
+            meta: { requiresAuth: true },
+        },
+        {
+            path: '/users/:id',
+            name: 'UserView',
+            component: () => import('@/views/ProfileView.vue'),
+            meta: { requiresAuth: true },
+            props: true
+        },
+        {
+            path: '/friends',
+            name: 'FriendsList',
+            component: () => import('@/views/FriendsList.vue'),
+            meta: { requiresAuth: true },
+        },
+        {
             path: '/profile/edit',
             name: 'EditProfile',
             component: () => import('@/views/EditProfileView.vue'),

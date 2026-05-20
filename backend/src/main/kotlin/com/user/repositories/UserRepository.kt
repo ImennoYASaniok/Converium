@@ -24,6 +24,8 @@ interface UserRepository : JpaRepository<User, Long> {
     """)
     fun search(@Param("query") query: String): List<User>
 
+    fun findTop10ByOrderByIdAsc(): List<User>
+
 
     @Query("""
         SELECT COUNT(*) > 0 FROM User u 

@@ -1,7 +1,8 @@
 .page {
   border: 2px solid var(--line);
   background: var(--panel);
-  padding: 28px;
+  --page-padding: 28px;
+  padding: var(--page-padding);
 }
 
 .page-title {
@@ -14,16 +15,18 @@
 .page-path {
   display: inline-block;
   background: var(--accent);
-  border: 2px solid var(--line);
+  border: var(--global-line-width) solid var(--line);
   padding: 4px 10px;
   margin-bottom: 18px;
   text-transform: uppercase;
 }
 
 .split-line {
-  height: 2px;
+  height: var(--global-line-height);
   background: var(--line);
   margin: 20px 0;
+  width: calc(100% + (var(--page-padding) * 2));
+  margin-left: calc(-1 * var(--page-padding));
 }
 
 .profile-grid {
@@ -33,7 +36,7 @@
 }
 
 .profile-item {
-  border: 2px solid var(--line);
+  border: var(--global-line-width) solid var(--line);
   padding: 10px;
   background: var(--surface);
 }

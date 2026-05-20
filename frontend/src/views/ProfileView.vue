@@ -6,6 +6,7 @@ import AppIcon from '../components/AppIcon.vue'
 
 export default {
   name: 'ProfileView',
+  props: ['id'],
   data() {
     return {
       loading: false,
@@ -21,6 +22,7 @@ export default {
         visibility: 'FRIENDS_ONLY'
       },
       createLoading: false,
+      isOwn: true,
     }
   },
   computed: {
@@ -38,8 +40,14 @@ export default {
       this.coursesLoading = true
       this.coursesError = ''
       try {
-        const res = await courseApi.getMy()
-        this.courses = res.data
+        // if viewing someone else's profile, load their courses
+        if (this.isOwn) {
+          const res = await courseApi.getMy()
+          this.courses = res.data
+        } else {
+          const res = await courseApi.getByUser(this.id)
+          this.courses = res.data
+        }
       } catch (e) {
         this.coursesError = 'Не удалось загрузить курсы'
       } finally {
@@ -83,6 +91,63 @@ export default {
         alert('Ошибка удаления курса')
       }
     },
+    async sendRequest() {
+      const auth = useAuthStore()
+      const me = auth.userId
+      if (!me) { alert('Не авторизован'); return }
+      try {
+        await usersApi.sendFriendRequest(me, this.profile.id)
+        alert('Заявка отправлена')
+        await this.reloadProfile()
+      } catch (e) {
+        alert('Ошибка: ' + (e?.response?.data?.message || e.message))
+      }
+    },
+    async cancelRequest() {
+      const auth = useAuthStore()
+      const me = auth.userId
+      if (!me) { alert('Не авторизован'); return }
+      try {
+        await usersApi.cancelFriendRequest(me, this.profile.id)
+        alert('Заявка отменена')
+        await this.reloadProfile()
+      } catch (e) {
+        alert('Ошибка: ' + (e?.response?.data?.message || e.message))
+      }
+    },
+    async accept(requesterId) {
+      const auth = useAuthStore()
+      const me = auth.userId
+      if (!me) { alert('Не авторизован'); return }
+      try {
+        await usersApi.acceptFriendRequest(me, requesterId)
+        alert('Добавлен в друзья')
+        await this.reloadProfile()
+      } catch (e) {
+        alert('Ошибка: ' + (e?.response?.data?.message || e.message))
+      }
+    },
+    async reject(requesterId) {
+      const auth = useAuthStore()
+      const me = auth.userId
+      if (!me) { alert('Не авторизован'); return }
+      try {
+        await usersApi.rejectFriendRequest(me, requesterId)
+        alert('Отклонено')
+        await this.reloadProfile()
+      } catch (e) {
+        alert('Ошибка: ' + (e?.response?.data?.message || e.message))
+      }
+    },
+    async reloadProfile() {
+      try {
+        const targetId = this.id ? Number(this.id) : useAuthStore().userId
+        const res = await usersApi.getById(targetId)
+        this.profile = res.data
+      } catch (e) {
+        // ignore
+      }
+    },
   },
   async created() {
     this.loading = true
@@ -92,13 +157,26 @@ export default {
         this.error = 'Не удалось определить пользователя'
         return
       }
-      const res = await usersApi.getById(auth.userId)
+      // Determine if viewing own profile or another user's
+      const targetId = this.id ? Number(this.id) : auth.userId
+      this.isOwn = targetId === auth.userId
+      const res = await usersApi.getById(targetId)
       this.profile = res.data
-      this.loadCourses()
+      await this.loadCourses()
     } catch (e) {
       this.error = e?.response?.data?.message || 'Не удалось загрузить профиль'
     } finally {
       this.loading = false
+    }
+  },
+  watch: {
+    id(newId, oldId) {
+      if (newId !== oldId) {
+        // reload component data when route param changed
+        this.loading = true
+        this.error = ''
+        this.created()
+      }
     }
   },
 }
@@ -113,31 +191,50 @@ export default {
     <p v-else-if="error" class="error-text">{{ error }}</p>
 
     <div v-else class="profile-grid">
-      <div class="avatar-square profile-item">
-        <img v-if="profile?.profilePicture" :src="profile.profilePicture" alt="Аватар" class="avatar-image" />
-        <AppIcon v-else name="user_icon" class="avatar-image" :size="'100%'" />
+
+      <div class="row-container">
+        <div class="avatar-square profile-item">
+          <img v-if="profile?.profilePicture" :src="profile.profilePicture" alt="Аватар" class="avatar-image" />
+          <AppIcon v-else name="user_icon" class="avatar-image" type="profile-avatar" :size="'100%'" />
+        </div>
+        <div class="col-container">
+          <div class="row-container">
+            <p class="profile-item"><strong>Логин:</strong> {{ profile.login }}</p>
+            <p class="profile-item"><strong>Email:</strong> {{ profile.email }}</p>
+          </div>
+          <p class="profile-item"><strong>Имя:</strong> {{ profile.name }}</p>
+          <p class="profile-item"><strong>Фамилия:</strong> {{ profile.surname }}</p>
+          <p class="profile-item"><strong>Описание:</strong> {{ profile.description }}</p>
+        </div>
       </div>
 
-      <p class="profile-item"><strong>Логин:</strong> {{ profile.login }}</p>
-      <p class="profile-item"><strong>Email:</strong> {{ profile.email }}</p>
-      <p class="profile-item"><strong>Имя:</strong> {{ profile.name }}</p>
-      <p class="profile-item"><strong>Фамилия:</strong> {{ profile.surname }}</p>
-      <p class="profile-item"><strong>Описание:</strong> {{ profile.description }}</p>
+      
 
-      <div class="action-row">
+      <div class="action-row" v-if="isOwn">
         <router-link class="path-button" to="/profile/edit">Изменить профиль</router-link>
       </div>
 
-      <div class="action-row">
+      <div class="action-row" v-if="isOwn && profile?.canEdit">
+        <router-link class="path-button" to="/friends">Список друзей</router-link>
+        <router-link class="path-button" to="/profile/requests">Заявки в друзья</router-link>
+      </div>
+
+      <div class="action-row" v-if="isOwn">
         <button class="path-button" type="button" @click="logout">Выйти</button>
+      </div>
+
+      <div class="action-row" v-else>
+        <button v-if="!profile.isFriend && !profile.hasIncomingRequest" class="path-button" @click="sendRequest">Отправить запрос в друзья</button>
+        <button v-else-if="!profile.isFriend && profile.hasIncomingRequest" class="path-button" @click="cancelRequest">Отменить запрос в друзья</button>
+        <p v-else-if="profile.isFriend" style="margin:0; color: #4caf50;">Вы в друзьях</p>
       </div>
     </div>
 
     <!-- Мои курсы -->
     <div style="margin-top: 2rem;">
       <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-        <h2 style="margin: 0;">Мои курсы</h2>
-        <button class="path-button" type="button" @click="showCreateCourse = !showCreateCourse">
+        <h2 style="margin: 0;">{{ isOwn ? 'Мои курсы' : 'Курсы' }}</h2>
+        <button v-if="isOwn" class="path-button" type="button" @click="showCreateCourse = !showCreateCourse">
           {{ showCreateCourse ? 'Отмена' : '+ Создать курс' }}
         </button>
       </div>
@@ -198,8 +295,8 @@ export default {
   justify-content: space-between;
   align-items: center;
   background: #1e1e2e;
-  border: 1px solid #333;
-  border-radius: 8px;
+  border: var(--global-line-width) solid #333;
+  border-radius: var(--global-radius);
   padding: 0.75rem 1rem;
 }
 .course-card-body {
@@ -219,9 +316,9 @@ export default {
   margin-bottom: 0.5rem;
   padding: 0.5rem;
   background: #2a2a3e;
-  border: 1px solid #444;
+  border: var(--global-line-widt) solid #444;
   color: #eee;
-  border-radius: 4px;
+  border-radius: var(--global-radius);
   font-family: inherit;
   box-sizing: border-box;
 }
@@ -244,9 +341,9 @@ export default {
 .create-course-container {
   background: var(--panel);
   color: var(--text);
-  border: 2px solid var(--line);
+  border: var(--global-line-width) solid var(--line);
   padding: 1rem;
-  border-radius: 0;
+  border-radius: var(--global-radius);
   margin-bottom: 1rem;
   max-width: 700px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.04);
@@ -256,10 +353,10 @@ export default {
 .create-course-container .course-textarea,
 .create-course-container .course-select {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: var(--global-line-width) solid var(--line);
   color: var(--text);
   padding: 0.6rem 0.75rem;
-  border-radius: 6px;
+  border-radius: var(--global-radius);
   width: 100%;
   margin-bottom: 0.75rem;
 }
@@ -276,20 +373,20 @@ export default {
 .path-button.primary {
   background: var(--accent);
   color: var(--text);
-  border: 2px solid var(--line);
+  border: var(--global-line-width) solid var(--line);
   padding: 0.6rem 1rem;
   font-size: 1rem;
-  border-radius: 0;
+  border-radius: var(--global-radius);
 }
 .path-button.primary:hover { background: var(--text); color: var(--accent); }
 
 .path-button.secondary {
   background: transparent;
   color: var(--text);
-  border: 2px solid var(--line);
+  border: var(--global-line-width) solid var(--line);
   padding: 0.6rem 1rem;
   font-size: 1rem;
-  border-radius: 0;
+  border-radius: var(--global-radius);
 }
 .path-button.secondary:hover { background: rgba(0,0,0,0.04); }
 </style>

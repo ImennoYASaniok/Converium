@@ -241,6 +241,14 @@ class CourseService(
         return all.map { toDto(it, userId) }
     }
 
+    @Transactional(readOnly = true)
+    fun getCoursesByUser(targetUserId: Long, requesterId: Long?): List<CourseDto> {
+        val owned = courseRepository.findByOwnerId(targetUserId)
+        val memberOf = courseRepository.findByMemberUserId(targetUserId)
+        val all = (owned + memberOf).distinctBy { it.id }
+        return all.map { toDto(it, requesterId ?: targetUserId) }
+    }
+
     @Transactional
     fun getCourseGraph(courseId: Long, requesterId: Long): CourseGraphDto {
         val course = courseRepository.findById(courseId)

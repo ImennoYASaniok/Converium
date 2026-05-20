@@ -131,6 +131,16 @@ class CourseController(
         return ResponseEntity.ok(courseStructureDto)
     }
 
+    @GetMapping("/user/{userId}")
+    fun getUserCourses(
+        @PathVariable userId: Long,
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
+    ): ResponseEntity<List<CourseDto>> {
+        val userIdHeader = reqUserId ?: 1L
+        val courses = courseService.getCoursesByUser(userId, reqUserId)
+        return ResponseEntity.ok(courses)
+    }
+
 
     @PostMapping("/{courseId}/structure")
     fun updateCourseStructure(

@@ -3,6 +3,7 @@ import api from './config'
 export const courseApi = {
   // Мои курсы
   getMy: () => api.get('/courses/my'),
+  getByUser: (userId) => api.get(`/courses/user/${userId}`),
   
   // Получить структуру курса
   getStructure: (courseId) => api.get(`/courses/${courseId}/structure`),

@@ -1,5 +1,6 @@
 @import './styles/base.css';
 @import './styles/tokens.css';
+@import './styles/rounding.css';
 @import './styles/header.css';
 @import './styles/footer.css';
 @import './styles/links.css';
@@ -10,3 +11,14 @@
 @import './styles/course/course_editor.css';
 @import './styles/course/step_editor.css';
 @import './styles/course/allcon.css';
+
+.row-container {
+    display: flex;
+    gap: 20px;
+}
+
+.col-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}

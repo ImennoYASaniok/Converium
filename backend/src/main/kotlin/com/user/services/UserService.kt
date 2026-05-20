@@ -123,7 +123,14 @@ class UserService(
     }
 
     fun searchUsers(query: String, currentUserId: Long?): List<UserDto> {
-        return userRepository.search(query).map { buildUserDto(it, currentUserId) }
+        val trimmed = query.trim()
+        val users = if (trimmed.isEmpty()) {
+            userRepository.findTop10ByOrderByIdAsc()
+        } else {
+            userRepository.search(trimmed)
+        }
+
+        return users.map { buildUserDto(it, currentUserId) }
     }
 
     fun sendFriendRequest(fromUserId: Long, toUserId: Long, currentUserId: Long) {

@@ -57,14 +57,8 @@ const iconStyle = computed(() => ({
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0;
-  transition: transform 0.12s ease;
   box-sizing: border-box;
   color: var(--text);
-}
-
-.app-icon:active {
-  transform: scale(0.98);
 }
 
 .app-icon .icon {
@@ -89,6 +83,8 @@ const iconStyle = computed(() => ({
 
 /* Default fill: text; on hover: accent */
 .app-icon:hover { color: var(--accent); }
+
+.app-icon[type="profile-avatar"]:hover { color: var(--text); }
 
 /* Also react when parent buttons are hovered */
 button:hover .app-icon,
