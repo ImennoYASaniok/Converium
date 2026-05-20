@@ -33,6 +33,19 @@ export default {
         this.loading = false
       }
     }
+    ,
+    async removeFriend(friendId) {
+      if (!confirm('Удалить пользователя из друзей?')) return
+      try {
+        const auth = useAuthStore()
+        const userId = auth.userId
+        if (!userId) { alert('Не авторизован'); return }
+        await usersApi.removeFriend(userId, friendId)
+        this.friends = this.friends.filter(f => f.id !== friendId)
+      } catch (e) {
+        alert('Ошибка при удалении: ' + (e?.response?.data?.message || e.message))
+      }
+    }
   },
   created() {
     this.load()
@@ -59,6 +72,10 @@ export default {
         <div class="friend-info">
           <div class="friend-name">{{ friend.name || friend.login }}</div>
           <div class="friend-login">@{{ friend.login }}</div>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:0.5rem;">
+          <router-link class="path-button" :to="`/users/${friend.id}`">Открыть</router-link>
+          <button class="path-button danger" @click="removeFriend(friend.id)">Удалить</button>
         </div>
       </div>
     </div>

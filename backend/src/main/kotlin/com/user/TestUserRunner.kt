@@ -132,7 +132,7 @@ class TestUserRunner(
         userService.unbanUser(user1.id, user3.id, user1.id)
         log.info("user1 разбанил user3")
 
-        val searchResults = userService.searchUsers("user", null)
+        val searchResults = userService.searchUsers("user", null, null)
         log.info("Поиск 'user': найдено ${searchResults.size} пользователей")
 
         userService.deleteUser(user3.id, user3.id)

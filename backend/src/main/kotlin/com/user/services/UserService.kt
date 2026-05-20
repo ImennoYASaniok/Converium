@@ -68,7 +68,7 @@ class UserService(
                         contacts = request.contacts?.toMutableSet() ?: mutableSetOf()
                 )
         val saved = userRepository.save(user)
-        return buildUserDto(saved, saved.id!!)
+        return buildUserDto(saved, saved.id?: throw IllegalStateException("Сохранённый пользователь должен иметь id"))
     }
 
     fun getUserById(id: Long, currentUserId: Long?): UserDto {
@@ -122,12 +122,17 @@ class UserService(
         userRepository.delete(user)
     }
 
-    fun searchUsers(query: String, currentUserId: Long?): List<UserDto> {
+    fun searchUsers(query: String, currentUserId: Long?, by: String?): List<UserDto> {
         val trimmed = query.trim()
         val users = if (trimmed.isEmpty()) {
             userRepository.findTop10ByOrderByIdAsc()
         } else {
-            userRepository.search(trimmed)
+            when (by?.lowercase()) {
+                "login" -> userRepository.searchByLogin(trimmed)
+                "email" -> userRepository.searchByEmail(trimmed)
+                "name" -> userRepository.searchByName(trimmed)
+                else -> userRepository.search(trimmed)
+            }
         }
 
         return users.map { buildUserDto(it, currentUserId) }

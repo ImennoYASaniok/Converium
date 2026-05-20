@@ -101,6 +101,7 @@ export default {
         </router-link>
         <router-link class="header-button" to="/about">О нас</router-link>
         <router-link class="header-button" to="/users/search">Поиск пользователей</router-link>
+        <router-link class="header-button" to="/courses/search">Поиск курсов</router-link>
       </div>
 
       <div class="header-group">

@@ -249,6 +249,25 @@ class CourseService(
         return all.map { toDto(it, requesterId ?: targetUserId) }
     }
 
+    @Transactional(readOnly = true)
+    fun searchCourses(query: String, requesterId: Long?, by: String?): List<CourseDto> {
+        val trimmed = query.trim()
+        val courses = if (trimmed.isEmpty()) {
+            courseRepository.findTop10ByOrderByIdAsc()
+        } else {
+            when (by?.lowercase()) {
+                "title" -> courseRepository.searchByTitle(trimmed)
+                "description" -> courseRepository.searchByDescription(trimmed)
+                "owner" -> courseRepository.searchByOwnerLogin(trimmed)
+                else -> {
+                    // default: search in title and description
+                    (courseRepository.searchByTitle(trimmed) + courseRepository.searchByDescription(trimmed)).distinctBy { it.id }
+                }
+            }
+        }
+        return courses.map { toDto(it, requesterId ?: -1L) }
+    }
+
     @Transactional
     fun getCourseGraph(courseId: Long, requesterId: Long): CourseGraphDto {
         val course = courseRepository.findById(courseId)

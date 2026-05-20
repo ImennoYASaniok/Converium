@@ -9,6 +9,7 @@ export default {
   data() {
     return {
       q: '',
+      by: '',
       loading: false,
       results: [],
       error: ''
@@ -20,8 +21,10 @@ export default {
       this.loading = true
       this.error = ''
       try {
-        const res = await usersApi.search(this.q.trim())
-        this.results = res.data
+        const res = await usersApi.search(this.q.trim(), this.by || undefined)
+        const auth = useAuthStore()
+        const meId = auth.userId
+        this.results = res.data.filter(u => (meId ? u.id !== meId : true))
       } catch (e) {
         this.error = e?.response?.data?.message || 'Ошибка поиска'
       } finally {
@@ -57,6 +60,10 @@ export default {
       }
     }
   }
+  ,
+  created() {
+    this.search()
+  }
 }
 </script>
 
@@ -65,8 +72,14 @@ export default {
     <h1 class="page-title">Поиск пользователей</h1>
     <div class="split-line" />
 
-    <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-      <input v-model="q" @keyup.enter="search" placeholder="Поиск по логину, имени или email" class="course-input" />
+    <div style="display:flex; gap:0.5rem; margin-bottom:1rem; align-items:center;">
+      <select v-model="by" class="course-select" style="width:160px">
+        <option value="">По всему</option>
+        <option value="login">По логину</option>
+        <option value="name">По имени/фамилии</option>
+        <option value="email">По email</option>
+      </select>
+      <input v-model="q" @keyup.enter="search" placeholder="Поиск" class="course-input" />
       <button class="path-button" @click="search">Поиск</button>
     </div>
 
@@ -82,11 +95,10 @@ export default {
           <AppIcon v-else name="user_icon" class="avatar-image" />
         </div>
         <div class="result-body">
-          <div class="result-name">{{ user.name || user.login }}</div>
-          <div class="result-login">@{{ user.login }}</div>
+          <div class="result-name"><router-link :to="`/users/${user.id}`">{{ user.name || user.login }}</router-link></div>
+          <div class="result-login">@<router-link :to="`/users/${user.id}`">{{ user.login }}</router-link></div>
         </div>
         <div class="result-actions">
-          <button class="path-button" @click="viewUser(user.id)">Открыть</button>
           <button v-if="!user.isFriend && !user.hasOutgoingRequest && !user.hasIncomingRequest" class="path-button" @click="sendRequest(user.id)">Добавить в друзья</button>
           <button v-else-if="user.hasOutgoingRequest" class="path-button" @click="cancelRequest(user.id)">Отменить заявку</button>
           <button v-else-if="user.hasIncomingRequest" class="path-button" @click="viewUser(user.id)">Просмотреть</button>

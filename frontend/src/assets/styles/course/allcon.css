@@ -13,9 +13,6 @@
 }
 
 button {
-    background: #333;
-    color: white;
-    border: 1px solid #555;
     padding: 8px 16px;
     cursor: pointer;
     font-weight: bold;

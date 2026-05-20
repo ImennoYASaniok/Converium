@@ -4,6 +4,7 @@ export const courseApi = {
   // Мои курсы
   getMy: () => api.get('/courses/my'),
   getByUser: (userId) => api.get(`/courses/user/${userId}`),
+  search: (q, by) => api.get('/courses/search', { params: { q, by } }),
   
   // Получить структуру курса
   getStructure: (courseId) => api.get(`/courses/${courseId}/structure`),

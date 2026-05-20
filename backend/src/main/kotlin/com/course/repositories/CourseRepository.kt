@@ -31,4 +31,25 @@ interface CourseRepository : JpaRepository<Course, Long> {
     fun findByMemberUserId(userId: Long): List<Course>
 
     fun findByVisibility(visibility: CourseVisibility): List<Course>
+
+    fun findTop10ByOrderByIdAsc(): List<Course>
+
+    @Query("""
+        SELECT c FROM Course c
+        WHERE LOWER(c.title) LIKE LOWER(CONCAT('%', :query, '%'))
+    """)
+    fun searchByTitle(@org.springframework.data.repository.query.Param("query") query: String): List<Course>
+
+    @Query("""
+        SELECT c FROM Course c
+        WHERE LOWER(c.description) LIKE LOWER(CONCAT('%', :query, '%'))
+    """)
+    fun searchByDescription(@org.springframework.data.repository.query.Param("query") query: String): List<Course>
+
+    @Query("""
+        SELECT c FROM Course c
+        JOIN c.owner o
+        WHERE LOWER(o.login) LIKE LOWER(CONCAT('%', :query, '%'))
+    """)
+    fun searchByOwnerLogin(@org.springframework.data.repository.query.Param("query") query: String): List<Course>
 }

@@ -39,7 +39,7 @@ class CourseController(
         return ResponseEntity.status(HttpStatus.CREATED).body(CourseDto.from(course, true))
     }
 
-    @GetMapping("/{courseId}")
+    @GetMapping("/{courseId:\\d+}")
     fun getCourse(
         @PathVariable courseId: Long,
 //        authentication: Authentication
@@ -50,7 +50,7 @@ class CourseController(
         return ResponseEntity.ok(courseDto)
     }
 
-    @DeleteMapping("/{courseId}")
+    @DeleteMapping("/{courseId:\\d+}")
     fun deleteCourse(
         @PathVariable courseId: Long,
 //        authentication: Authentication
@@ -61,7 +61,7 @@ class CourseController(
         return ResponseEntity.noContent().build()
     }
 
-    @PutMapping("/{courseId}")
+    @PutMapping("/{courseId:\\d+}")
     fun updateCourse(
         @PathVariable courseId: Long,
         @RequestBody dto: UpdateCourseDto,
@@ -73,7 +73,7 @@ class CourseController(
         return ResponseEntity.ok(courseService.toDto(updatedCourse, userId))
     }
 
-    @PostMapping("/{courseId}/start")
+    @PostMapping("/{courseId:\\d+}/start")
     fun startCourse(
         @PathVariable courseId: Long,
 //        authentication: Authentication
@@ -84,7 +84,7 @@ class CourseController(
         return ResponseEntity.status(HttpStatus.CREATED).body(CourseEnrollmentDto.from(enrollment))
     }
 
-    @PostMapping("/{courseId}/members")
+    @PostMapping("/{courseId:\\d+}/members")
     fun addMember(
         @PathVariable courseId: Long,
         @RequestBody dto: MemberDto,
@@ -96,7 +96,7 @@ class CourseController(
         return ResponseEntity.status(HttpStatus.CREATED).body(CourseMembershipDto.from(newMember))
     }
 
-    @PutMapping("/{courseId}/members")
+    @PutMapping("/{courseId:\\d+}/members")
     fun updateMemberAbility(
         @PathVariable courseId: Long,
         @RequestBody dto: MemberDto,
@@ -108,7 +108,7 @@ class CourseController(
         return ResponseEntity.ok(CourseMembershipDto.from(updated))
     }
 
-    @DeleteMapping("/{courseId}/members/{userId}")
+    @DeleteMapping("/{courseId:\\d+}/members/{userId}")
     fun removeMember(
         @PathVariable courseId: Long,
         @PathVariable userId: Long,
@@ -120,7 +120,7 @@ class CourseController(
         return ResponseEntity.noContent().build()
     }
 
-    @GetMapping("/{courseId}/structure")
+    @GetMapping("/{courseId:\\d+}/structure")
     fun getCourseStructure(
         @PathVariable courseId: Long,
 //        authentication: Authentication
@@ -141,8 +141,15 @@ class CourseController(
         return ResponseEntity.ok(courses)
     }
 
+    @GetMapping("/search")
+    fun searchCourses(@RequestParam q: String, @RequestParam(required = false) by: String?, @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null): ResponseEntity<List<CourseDto>> {
+        val currentUserId = reqUserId ?: -1L
+        val courses = courseService.searchCourses(q, if (currentUserId >= 0) currentUserId else null, by)
+        return ResponseEntity.ok(courses)
+    }
 
-    @PostMapping("/{courseId}/structure")
+
+    @PostMapping("/{courseId:\\d+}/structure")
     fun updateCourseStructure(
         @PathVariable courseId: Long,
         @RequestBody dto: CourseGraphDto,
@@ -156,32 +163,32 @@ class CourseController(
 
     // --- Step CRUD ---
 
-    @GetMapping("/{courseId}/steps/{stepId}")
-    fun getStep(
+        @GetMapping("/{courseId:\\d+}/steps/{stepId}")
+        fun getStep(
             @PathVariable courseId: Long,
             @PathVariable stepId: Long
-    ): ResponseEntity<StepDetailDto> {
+        ): ResponseEntity<StepDetailDto> {
         val userId = getCurrentUserId()
         val stepDto = courseService.getStep(courseId, stepId, userId)
         return ResponseEntity.ok(stepDto)
     }
 
-    @PutMapping("/{courseId}/steps/{stepId}")
-    fun updateStep(
+        @PutMapping("/{courseId:\\d+}/steps/{stepId}")
+        fun updateStep(
             @PathVariable courseId: Long,
             @PathVariable stepId: Long,
             @RequestBody dto: UpdateStepDto
-    ): ResponseEntity<StepDetailDto> {
+        ): ResponseEntity<StepDetailDto> {
         val userId = getCurrentUserId()
         val updated = courseService.updateStep(courseId, stepId, dto, userId)
         return ResponseEntity.ok(updated)
     }
 
-    @DeleteMapping("/{courseId}/steps/{stepId}")
-    fun deleteStep(
+        @DeleteMapping("/{courseId:\\d+}/steps/{stepId}")
+        fun deleteStep(
             @PathVariable courseId: Long,
             @PathVariable stepId: Long
-    ): ResponseEntity<Void> {
+        ): ResponseEntity<Void> {
         val userId = getCurrentUserId()
         courseService.deleteStep(courseId, stepId, userId)
         return ResponseEntity.noContent().build()

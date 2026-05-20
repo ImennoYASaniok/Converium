@@ -14,7 +14,9 @@ a.button,
 .result-card,
 .create-course-container,
 .user-dropdown,
-.header-nav {
+.header-nav,
+.profile-item,
+.avatar-image {
   border-radius: var(--global-radius);
 }
 
@@ -26,7 +28,6 @@ button:focus, .path-button:focus {
 /* Normalize all dividing lines to 2px solid var(--line) */
 hr,
 .split-line,
-.site-footer,
 .page,
 .page-path,
 .profile-item,
@@ -42,6 +43,3 @@ hr,
 
 /* keep split-line as thin bar (use background) */
 .split-line { height: var(--global-line-width); background: var(--line); border: none !important }
-
-/* footer top line ensure 2px */
-.site-footer { border-top: var(--global-line-width) solid var(--line) !important }

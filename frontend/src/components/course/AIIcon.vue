@@ -448,20 +448,6 @@ defineExpose({
     padding: 10px;
 }
 
-button {
-    background: #333;
-    color: white;
-    border: 1px solid #555;
-    padding: 8px 16px;
-    cursor: pointer;
-    border-radius: 4px;
-    font-weight: bold;
-}
-
-button:hover {
-    background: #555;
-}
-
 .ai-container {
     width: 100%;
     max-width: 1000px;
