@@ -142,7 +142,11 @@ class CourseController(
     }
 
     @GetMapping("/search")
-    fun searchCourses(@RequestParam q: String, @RequestParam(required = false) by: String?, @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null): ResponseEntity<List<CourseDto>> {
+    fun searchCourses(
+        @RequestParam q: String, 
+        @RequestParam(required = false) by: String?,
+        @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
+    ): ResponseEntity<List<CourseDto>> {
         val currentUserId = reqUserId ?: -1L
         val byEnum = when (by?.lowercase()) {
             "title" -> SearchBy.TITLE

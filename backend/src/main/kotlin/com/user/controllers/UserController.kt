@@ -131,7 +131,10 @@ class UserController(
     }
 
     @GetMapping("/search")
-    fun searchUsers(@RequestParam q: String, @RequestParam(required = false) by: String?): ResponseEntity<List<UserDto>> {
+    fun searchUsers(
+        @RequestParam q: String, 
+        @RequestParam(required = false) by: String?
+    ): ResponseEntity<List<UserDto>> {
         val currentUserId = getCurrentUserId()
         val users = userService.searchUsers(q, currentUserId, by)
         return ResponseEntity.ok(users)
