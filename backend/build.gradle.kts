@@ -41,6 +41,9 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.3")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.3")
 
+    implementation("org.flywaydb:flyway-core")
+    runtimeOnly("org.flywaydb:flyway-database-postgresql")
+
     // env
     implementation("me.paulschwarz:spring-dotenv:4.0.0")
 
@@ -50,6 +53,7 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("com.ninja-squad:springmockk:4.0.2")
     testImplementation("org.assertj:assertj-core:3.24.2")
+    testImplementation("com.h2database:h2")
 
 }
 
