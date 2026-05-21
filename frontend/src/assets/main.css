@@ -10,3 +10,9 @@
 @import './styles/course/course_editor.css';
 @import './styles/course/step_editor.css';
 @import './styles/course/allcon.css';
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}

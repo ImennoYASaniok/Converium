@@ -7,6 +7,7 @@ import com.course.repositories.CourseMembershipRepository
 import com.course.repositories.CourseRepository
 import com.course.repositories.StepEdgeRepository
 import com.course.repositories.StepRepository
+import com.course.services.CourseService
 import com.user.models.User
 import com.user.repositories.UserRepository
 import io.mockk.every
