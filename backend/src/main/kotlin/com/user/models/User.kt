@@ -21,7 +21,7 @@ class User(
     @Column(nullable = false, unique = true, length = 50)
     var email: String = "",
 
-    @Column(name = "profile_picture")
+    @Column(name = "profile_picture", columnDefinition = "TEXT")
     var profilePicture: String = "",
 
     @Column(length = 30)
@@ -32,6 +32,9 @@ class User(
 
     @Column(columnDefinition = "TEXT")
     var description: String = "",
+
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20) default 'light'")
+    var theme: String = "light",
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "user_contacts", joinColumns = [JoinColumn(name = "user_id")])

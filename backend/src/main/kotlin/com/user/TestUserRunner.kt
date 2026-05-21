@@ -7,10 +7,12 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionTemplate
 
 @Component
+@Profile("test-runner")
 class TestUserRunner(
     private val userService: UserService,
     private val userRepository: UserRepository,

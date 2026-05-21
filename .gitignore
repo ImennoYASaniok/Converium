@@ -80,3 +80,5 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+*.zip

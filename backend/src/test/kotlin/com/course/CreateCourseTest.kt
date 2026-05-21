@@ -120,14 +120,14 @@ class CreateCourseTest {
 
         every { userRepository.findById(ownerId) } returns Optional.of(owner)
         every { courseRepository.save(any()) } returns savedCourse
-
+        every { courseMembershipRepository.save(any()) } returns mockk()
 
         val result = courseService.createCourse(dto, ownerId)
 
         assertThat(result.visibility).isEqualTo(CourseVisibility.PUBLIC)
         assertThat(result.moderationStatus).isEqualTo(ModerationStatus.PENDING)
 
-        verify(exactly = 0) { courseMembershipRepository.save(any()) }
+        verify(exactly = 1) { courseMembershipRepository.save(any()) }
     }
 
     @Test

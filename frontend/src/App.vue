@@ -1,33 +1,31 @@
 <script>
-// import { RouterLink, RouterView } from 'vue-router'
-import CourseEditor from './components/course/CourseEditor.vue';
-
+import { usersApi } from './api/users_api'
+import AppHeader from './components/layout/AppHeader.vue'
+import AppFooter from './components/layout/AppFooter.vue'
+import { useAuthStore } from './stores/auth'
+import { useThemeStore } from './stores/theme'
+import { RouterView } from 'vue-router'
 
 export default {
   components: {
-    CourseEditor
+    AppHeader,
+    AppFooter,
+    RouterView,
   },
-
-  data() {
-    return {
-      
-    }
+  async created() {
+    const auth = useAuthStore()
+    const themeStore = useThemeStore()
+    themeStore.initTheme()
   },
-
-  methods: {
-
-  },
-
-  created() {
-
-  }
 }
 </script>
 
 <template>
-  <CourseEditor :courseId="5"></CourseEditor>
+  <div style="margin-bottom: 30px;"></div>
+  <AppHeader />
+  <main>
+    <RouterView />
+  </main>
+  <AppFooter />
 </template>
 
-<style scoped>
-
-</style>

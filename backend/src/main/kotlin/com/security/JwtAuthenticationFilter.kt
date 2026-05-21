@@ -34,7 +34,7 @@ class JwtAuthenticationFilter(
 
             // Проверяем, существует ли пользователь в базе данных
             val userExists = userRepository.existsById(userId)
-            
+
             if (userExists) {
                 val authentication = UsernamePasswordAuthenticationToken(userId, null, emptyList())
                 SecurityContextHolder.getContext().authentication = authentication
