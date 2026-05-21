@@ -42,7 +42,7 @@ interface UserRepository : JpaRepository<User, Long> {
     """)
     fun searchByName(@Param("query") query: String): List<User>
 
-    fun findTop10ByOrderByIdAsc(): List<User>
+    fun findTop10ByOrderById(): List<User>
 
 
     @Query("""

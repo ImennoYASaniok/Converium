@@ -144,7 +144,13 @@ class CourseController(
     @GetMapping("/search")
     fun searchCourses(@RequestParam q: String, @RequestParam(required = false) by: String?, @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null): ResponseEntity<List<CourseDto>> {
         val currentUserId = reqUserId ?: -1L
-        val courses = courseService.searchCourses(q, if (currentUserId >= 0) currentUserId else null, by)
+        val byEnum = when (by?.lowercase()) {
+            "title" -> SearchBy.TITLE
+            "description" -> SearchBy.DESCRIPTION
+            "owner" -> SearchBy.OWNER
+            else -> null
+        }
+        val courses = courseService.searchCourses(q, if (currentUserId >= 0) currentUserId else null, byEnum)
         return ResponseEntity.ok(courses)
     }
 
@@ -153,21 +159,18 @@ class CourseController(
     fun updateCourseStructure(
         @PathVariable courseId: Long,
         @RequestBody dto: CourseGraphDto,
-//        authentication: Authentication
         @RequestHeader("X-User-Id", required = false) reqUserId: Long? = null
     ): ResponseEntity.BodyBuilder {
         val userId = reqUserId ?: 1L // authentication.name.toLong()
         courseService.updateCourseGraph(courseId, dto, userId)
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
     }
-
-    // --- Step CRUD ---
-
-        @GetMapping("/{courseId:\\d+}/steps/{stepId}")
-        fun getStep(
-            @PathVariable courseId: Long,
-            @PathVariable stepId: Long
-        ): ResponseEntity<StepDetailDto> {
+    
+    @GetMapping("/{courseId:\\d+}/steps/{stepId}")
+    fun getStep(
+        @PathVariable courseId: Long,
+        @PathVariable stepId: Long
+    ): ResponseEntity<StepDetailDto> {
         val userId = getCurrentUserId()
         val stepDto = courseService.getStep(courseId, stepId, userId)
         return ResponseEntity.ok(stepDto)

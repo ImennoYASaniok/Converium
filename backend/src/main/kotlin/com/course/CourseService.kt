@@ -14,6 +14,13 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 
+enum class SearchBy {
+    TITLE,
+    DESCRIPTION,
+    OWNER,
+    ALL
+}
+
 @Service
 class CourseService(
     private val courseRepository: CourseRepository,
@@ -250,19 +257,16 @@ class CourseService(
     }
 
     @Transactional(readOnly = true)
-    fun searchCourses(query: String, requesterId: Long?, by: String?): List<CourseDto> {
+    fun searchCourses(query: String, requesterId: Long?, by: SearchBy?): List<CourseDto> {
         val trimmed = query.trim()
         val courses = if (trimmed.isEmpty()) {
             courseRepository.findTop10ByOrderByIdAsc()
         } else {
-            when (by?.lowercase()) {
-                "title" -> courseRepository.searchByTitle(trimmed)
-                "description" -> courseRepository.searchByDescription(trimmed)
-                "owner" -> courseRepository.searchByOwnerLogin(trimmed)
-                else -> {
-                    // default: search in title and description
-                    (courseRepository.searchByTitle(trimmed) + courseRepository.searchByDescription(trimmed)).distinctBy { it.id }
-                }
+            when (by ?: SearchBy.ALL) {
+                SearchBy.TITLE -> courseRepository.findByTitleContainingIgnoreCase(trimmed)
+                SearchBy.DESCRIPTION -> courseRepository.findByDescriptionContainingIgnoreCase(trimmed)
+                SearchBy.OWNER -> courseRepository.findByOwnerLoginContainingIgnoreCase(trimmed)
+                SearchBy.ALL -> (courseRepository.findByTitleContainingIgnoreCase(trimmed) + courseRepository.findByDescriptionContainingIgnoreCase(trimmed)).distinctBy { it.id }
             }
         }
         return courses.map { toDto(it, requesterId ?: -1L) }

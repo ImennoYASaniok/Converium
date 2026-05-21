@@ -6,6 +6,7 @@ import com.course.models.ModerationStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
+import org.springframework.data.repository.query.Param
 
 @Repository
 interface CourseRepository : JpaRepository<Course, Long> {
@@ -34,22 +35,11 @@ interface CourseRepository : JpaRepository<Course, Long> {
 
     fun findTop10ByOrderByIdAsc(): List<Course>
 
-    @Query("""
-        SELECT c FROM Course c
-        WHERE LOWER(c.title) LIKE LOWER(CONCAT('%', :query, '%'))
-    """)
-    fun searchByTitle(@org.springframework.data.repository.query.Param("query") query: String): List<Course>
+    // Use derived query methods provided by Spring Data for simplicity and readability
+    fun findByTitleContainingIgnoreCase(title: String): List<Course>
 
-    @Query("""
-        SELECT c FROM Course c
-        WHERE LOWER(c.description) LIKE LOWER(CONCAT('%', :query, '%'))
-    """)
-    fun searchByDescription(@org.springframework.data.repository.query.Param("query") query: String): List<Course>
+    fun findByDescriptionContainingIgnoreCase(description: String): List<Course>
 
-    @Query("""
-        SELECT c FROM Course c
-        JOIN c.owner o
-        WHERE LOWER(o.login) LIKE LOWER(CONCAT('%', :query, '%'))
-    """)
-    fun searchByOwnerLogin(@org.springframework.data.repository.query.Param("query") query: String): List<Course>
+    // Nested property search on owner.login
+    fun findByOwnerLoginContainingIgnoreCase(login: String): List<Course>
 }
