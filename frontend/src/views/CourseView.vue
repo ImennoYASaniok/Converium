@@ -141,7 +141,7 @@ export default {
           <h1 class="sidebar-title">{{ course.title }}</h1>
           <p class="sidebar-desc">{{ course.description || 'Нет описания' }}</p>
           <div class="sidebar-meta">
-            <span>Владелец: <router-link v-if="course.owner" :to="`/users/${course.owner.id}`">{{ course.owner.login }}</router-link><span v-else>—</span></span>
+            <span>Владелец: {{ course.owner?.login }}</span>
             <span>Видимость: {{ course.visibility }}</span>
             <span>Участников: {{ course.memberCount }}</span>
             <span>Создан: {{ new Date(course.createdAt).toLocaleDateString() }}</span>

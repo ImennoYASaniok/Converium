@@ -92,8 +92,6 @@ export default {
           profilePicture: this.form.profilePicture,
         })
         this.success = 'Профиль успешно обновлён'
-        // notify header and other listeners that profile was updated
-        try { window.dispatchEvent(new CustomEvent('profile-updated')) } catch {}
       } catch (e) {
         this.error = e?.response?.data?.message || 'Не удалось сохранить профиль'
       } finally {
