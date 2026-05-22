@@ -17,9 +17,9 @@ body {
   flex-direction: column;
 }
 
-.main {
+main {
   width: min(1040px, calc(100% - 40px));
-  margin: 0 auto;
+  margin: 48px auto;
   flex: 1;
 }
 

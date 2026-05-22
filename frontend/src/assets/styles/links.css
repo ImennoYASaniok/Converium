@@ -1,0 +1,11 @@
+a {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  background-color: var(--accent);
+  color: var(--text);
+}

@@ -208,7 +208,7 @@ export default {
         </div>
       </div>
 
-      
+
 
       <div class="action-row" v-if="isOwn">
         <router-link class="path-button" to="/profile/edit">Изменить профиль</router-link>
