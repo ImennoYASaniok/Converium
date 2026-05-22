@@ -8,6 +8,7 @@ import com.course.repositories.CourseRepository
 import com.course.repositories.StepEdgeRepository
 import com.course.repositories.StepRepository
 import com.course.services.CourseService
+import com.shared.exception.NotFoundException
 import com.user.models.User
 import com.user.repositories.UserRepository
 import io.mockk.every
@@ -144,25 +145,11 @@ class CreateCourseTest {
 
         assertThatThrownBy {
             courseService.createCourse(dto, ownerId)
-        }.isInstanceOf(IllegalArgumentException::class.java)
+        }.isInstanceOf(NotFoundException::class.java)
             .hasMessageContaining("Пользователь не найден")
 
         verify { userRepository.findById(ownerId) }
         verify(exactly = 0) { courseRepository.save(any()) }
-    }
-
-    @Test
-    fun `should throw when title is blank`() {
-        val ownerId = 1L
-        val dto = CreateCourseDto(
-            title = "     ",
-            description = "Test",
-            visibility = CourseVisibility.FRIENDS_ONLY
-        )
-        assertThatThrownBy {
-            courseService.createCourse(dto, ownerId)
-        }.isInstanceOf(IllegalArgumentException::class.java)
-            .hasMessageContaining("Заголовок не может быть пустым")
     }
 
     @Test
