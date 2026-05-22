@@ -17,7 +17,9 @@ class JwtAuthenticationFilter(
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val path = request.requestURI
-        return path.startsWith("/api/auth/") || path == "/api/users/register"
+        return path.startsWith("/api/auth/")
+                || path.startsWith("/api/users/register")
+                || path.startsWith("/actuator/health")
     }
 
     override fun doFilterInternal(
@@ -32,7 +34,7 @@ class JwtAuthenticationFilter(
 
             // Проверяем, существует ли пользователь в базе данных
             val userExists = userRepository.existsById(userId)
-            
+
             if (userExists) {
                 val authentication = UsernamePasswordAuthenticationToken(userId, null, emptyList())
                 SecurityContextHolder.getContext().authentication = authentication
