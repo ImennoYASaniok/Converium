@@ -33,13 +33,12 @@ interface CourseRepository : JpaRepository<Course, Long> {
 
     fun findByVisibility(visibility: CourseVisibility): List<Course>
 
-    fun findTop10ByOrderByIdAsc(): List<Course>
+    @Query("SELECT c FROM Course c ORDER BY c.id ASC")
+    fun findTop10Courses(): List<Course>
 
-    // Use derived query methods provided by Spring Data for simplicity and readability
     fun findByTitleContainingIgnoreCase(title: String): List<Course>
 
     fun findByDescriptionContainingIgnoreCase(description: String): List<Course>
 
-    // Nested property search on owner.login
     fun findByOwnerLoginContainingIgnoreCase(login: String): List<Course>
 }

@@ -260,7 +260,7 @@ class CourseService(
     fun searchCourses(query: String, requesterId: Long?, by: SearchBy?): List<CourseDto> {
         val trimmed = query.trim()
         val courses = if (trimmed.isEmpty()) {
-            courseRepository.findTop10ByOrderByIdAsc()
+            courseRepository.findTop10Courses()
         } else {
             when (by ?: SearchBy.ALL) {
                 SearchBy.TITLE -> courseRepository.findByTitleContainingIgnoreCase(trimmed)

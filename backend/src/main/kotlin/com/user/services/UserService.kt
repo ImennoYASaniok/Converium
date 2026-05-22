@@ -125,7 +125,7 @@ class UserService(
     fun searchUsers(query: String, currentUserId: Long?, by: String?): List<UserDto> {
         val trimmed = query.trim()
         val users = if (trimmed.isEmpty()) {
-            userRepository.findTop10ByOrderById()
+            userRepository.findTop10Users()
         } else {
             when (by?.lowercase()) {
                 "login" -> userRepository.searchByLogin(trimmed)
