@@ -24,6 +24,27 @@ interface UserRepository : JpaRepository<User, Long> {
     """)
     fun search(@Param("query") query: String): List<User>
 
+    @Query("""
+        SELECT u FROM User u
+        WHERE u.login LIKE %:query%
+    """)
+    fun searchByLogin(@Param("query") query: String): List<User>
+
+    @Query("""
+        SELECT u FROM User u
+        WHERE u.email LIKE %:query%
+    """)
+    fun searchByEmail(@Param("query") query: String): List<User>
+
+    @Query("""
+        SELECT u FROM User u
+        WHERE u.name LIKE %:query% OR u.surname LIKE %:query%
+    """)
+    fun searchByName(@Param("query") query: String): List<User>
+
+    @Query("SELECT u FROM User u ORDER BY u.id ASC")
+    fun findTop10Users(): List<User>
+
 
     @Query("""
         SELECT COUNT(*) > 0 FROM User u 

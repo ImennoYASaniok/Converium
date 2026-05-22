@@ -122,8 +122,20 @@ class UserService(
         userRepository.delete(user)
     }
 
-    fun searchUsers(query: String, currentUserId: Long?): List<UserDto> {
-        return userRepository.search(query).map { buildUserDto(it, currentUserId) }
+    fun searchUsers(query: String, currentUserId: Long?, by: String?): List<UserDto> {
+        val trimmed = query.trim()
+        val users = if (trimmed.isEmpty()) {
+            userRepository.findTop10Users()
+        } else {
+            when (by?.lowercase()) {
+                "login" -> userRepository.searchByLogin(trimmed)
+                "email" -> userRepository.searchByEmail(trimmed)
+                "name" -> userRepository.searchByName(trimmed)
+                else -> userRepository.search(trimmed)
+            }
+        }
+
+        return users.map { buildUserDto(it, currentUserId) }
     }
 
     fun sendFriendRequest(fromUserId: Long, toUserId: Long, currentUserId: Long) {

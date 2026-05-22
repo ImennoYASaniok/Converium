@@ -32,6 +32,13 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 
+enum class SearchBy {
+    TITLE,
+    DESCRIPTION,
+    OWNER,
+    ALL
+}
+
 @Service
 class CourseService(
     private val courseRepository: CourseRepository,
@@ -269,7 +276,36 @@ class CourseService(
         return courseMembershipRepository.save(membership)
     }
 
+    fun getMyCourses(userId: Long): List<CourseDto> {
+        val owned = courseRepository.findByOwnerId(userId)
+        val memberOf = courseRepository.findByMemberUserId(userId)
+        val all = (owned + memberOf).distinctBy { it.id }
+        return all.map { toDto(it, userId) }
+    }
 
+    @Transactional(readOnly = true)
+    fun getCoursesByUser(targetUserId: Long, requesterId: Long?): List<CourseDto> {
+        val owned = courseRepository.findByOwnerId(targetUserId)
+        val memberOf = courseRepository.findByMemberUserId(targetUserId)
+        val all = (owned + memberOf).distinctBy { it.id }
+        return all.map { toDto(it, requesterId ?: targetUserId) }
+    }
+
+    @Transactional(readOnly = true)
+    fun searchCourses(query: String, requesterId: Long?, by: SearchBy?): List<CourseDto> {
+        val trimmed = query.trim()
+        val courses = if (trimmed.isEmpty()) {
+            courseRepository.findTop10Courses()
+        } else {
+            when (by ?: SearchBy.ALL) {
+                SearchBy.TITLE -> courseRepository.findByTitleContainingIgnoreCase(trimmed)
+                SearchBy.DESCRIPTION -> courseRepository.findByDescriptionContainingIgnoreCase(trimmed)
+                SearchBy.OWNER -> courseRepository.findByOwnerLoginContainingIgnoreCase(trimmed)
+                SearchBy.ALL -> (courseRepository.findByTitleContainingIgnoreCase(trimmed) + courseRepository.findByDescriptionContainingIgnoreCase(trimmed)).distinctBy { it.id }
+            }
+        }
+        return courses.map { toDto(it, requesterId ?: -1L) }
+    }
 
     @Transactional
     fun getCourseGraph(courseId: Long, requesterId: Long): CourseGraphDto {
@@ -367,13 +403,6 @@ class CourseService(
         }
 
         stepRepository.delete(step)
-    }
-
-    fun getMyCourses(userId: Long): List<CourseDto> {
-        val owned = courseRepository.findByOwnerId(userId)
-        val memberOf = courseRepository.findByMemberUserId(userId)
-        val all = (owned + memberOf).distinctBy { it.id }
-        return all.map { toDto(it, userId) }
     }
 
     private fun canView(course: Course, userId: Long): Boolean {

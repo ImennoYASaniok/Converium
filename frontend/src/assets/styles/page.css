@@ -1,0 +1,42 @@
+.page {
+  border: 2px solid var(--line);
+  background: var(--panel);
+  --page-padding: 28px;
+  padding: var(--page-padding);
+}
+
+.page-title {
+  font-size: clamp(28px, 3vw, 46px);
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.page-path {
+  display: inline-block;
+  background: var(--accent);
+  border: var(--global-line-width) solid var(--line);
+  padding: 4px 10px;
+  margin-bottom: 18px;
+  text-transform: uppercase;
+}
+
+.split-line {
+  height: var(--global-line-height);
+  background: var(--line);
+  margin: 20px 0;
+  width: calc(100% + (var(--page-padding) * 2));
+  margin-left: calc(-1 * var(--page-padding));
+}
+
+.profile-grid {
+  display: grid;
+  gap: 10px;
+  max-width: 760px;
+}
+
+.profile-item {
+  border: var(--global-line-width) solid var(--line);
+  padding: 10px;
+  background: var(--surface);
+}

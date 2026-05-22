@@ -10,7 +10,7 @@ export default {
   components: {
     AppHeader,
     AppFooter,
-    RouterView,
+    RouterView
   },
   async created() {
     const auth = useAuthStore()
@@ -28,4 +28,3 @@ export default {
   </main>
   <AppFooter />
 </template>
-

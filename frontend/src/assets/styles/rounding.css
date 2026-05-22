@@ -1,0 +1,45 @@
+/* Apply default radius to form controls and common interactive elements if not explicitly set elsewhere */
+button,
+input[type="button"],
+input[type="submit"],
+input,
+select,
+textarea,
+a.button,
+.path-button,
+.card,
+.panel,
+.page,
+.course-card,
+.result-card,
+.create-course-container,
+.user-dropdown,
+.header-nav,
+.profile-item,
+.avatar-image {
+  border-radius: var(--global-radius);
+}
+
+/* Ensure focus outlines remain visible */
+button:focus, .path-button:focus {
+  outline-offset: var(--global-line-width);
+}
+
+/* Normalize all dividing lines to 2px solid var(--line) */
+hr,
+.split-line,
+.page,
+.page-path,
+.profile-item,
+.user-dropdown-button,
+.user-dropdown,
+.course-card,
+.result-card,
+.create-course-container,
+.card,
+.panel {
+  border: var(--global-line-width) solid var(--line) !important;
+}
+
+/* keep split-line as thin bar (use background) */
+.split-line { height: var(--global-line-width); background: var(--line); border: none !important }

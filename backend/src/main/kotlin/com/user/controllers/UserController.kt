@@ -39,21 +39,21 @@ class UserController(
         return ResponseEntity.status(HttpStatus.CREATED).body(created)
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     fun getUser(@PathVariable id: Long): ResponseEntity<UserDto> {
         val currentUserId = getCurrentUserId()
         val user = userService.getUserById(id, currentUserId)
         return ResponseEntity.ok(user)
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id:\\d+}")
     fun updateUser(@PathVariable id: Long, @Valid @RequestBody request: UpdateUserRequest): ResponseEntity<UserDto> {
         val currentUserId = getCurrentUserId() ?: throw IllegalArgumentException(errorStringAuth)
         val updated = userService.updateUser(id, request, currentUserId)
         return ResponseEntity.ok(updated)
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}")
     fun deleteUser(@PathVariable id: Long): ResponseEntity<Void> {
         val currentUserId = getCurrentUserId() ?: throw IllegalArgumentException(errorStringAuth)
         userService.deleteUser(id, currentUserId)
@@ -131,9 +131,12 @@ class UserController(
     }
 
     @GetMapping("/search")
-    fun searchUsers(@RequestParam q: String): ResponseEntity<List<UserDto>> {
+    fun searchUsers(
+        @RequestParam q: String, 
+        @RequestParam(required = false) by: String?
+    ): ResponseEntity<List<UserDto>> {
         val currentUserId = getCurrentUserId()
-        val users = userService.searchUsers(q, currentUserId)
+        val users = userService.searchUsers(q, currentUserId, by)
         return ResponseEntity.ok(users)
     }
 }

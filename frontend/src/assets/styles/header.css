@@ -1,0 +1,135 @@
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+}
+
+:root {
+  --site-header-height: 64px;
+}
+
+.header-nav {
+  width: min(1400px, calc(100% - 24px));
+  margin: 8px auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.header-nav::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  background: var(--line);
+  transform: translateY(-50%) scaleX(var(--header-line-scale, 1));
+  transform-origin: right center;
+  transition: transform 200ms linear;
+  z-index: 0;
+}
+
+.header-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+  z-index: 1;
+  border: var(--global-line-width) solid var(--line);
+  border-radius: var(--global-radius);
+  overflow: hidden;
+}
+/* .header-group > *:first-child {
+  border-top-left-radius: var(--global-radius);
+  border-bottom-left-radius: var(--global-radius);
+} */
+.header-group > *:last-child {
+  /* border-top-right-radius: var(--global-radius);
+  border-bottom-right-radius: var(--global-radius); */
+  border-right: 0;
+}
+
+.header-button {
+  border-right: var(--global-line-width) solid var(--line);
+  background: var(--accent);
+  color: var(--text);
+  padding: 7px 14px;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  display: inline-block;
+  text-decoration: none;
+}
+.header-button[type="logo"] {
+  padding: 5px 10px;
+}
+.header-button:hover {
+  background: var(--text);
+  color: var(--accent);
+}
+
+.avatar-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--surface);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.avatar-button:hover {
+  background: var(--surface);
+}
+
+.avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.logo-image {
+  height: 18px; /*1em;*/
+  width: auto;
+  display: inline-block;
+  border-radius: 0;
+  vertical-align: middle;
+}
+
+.logo-image .icon {
+  width: 100%;
+  height: 99%;
+}
+
+.header-button:hover .logo-image {
+  /* color is inherited by AppIcon via currentColor */
+  color: var(--text);
+}
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% - 4px);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+}
+
+.user-dropdown-button {
+  text-align: center;
+  border: var(--global-line-width) solid #000;
+  display: block;
+  margin-bottom: -2px;
+}
+
+.user-dropdown-button:last-child {
+  margin-bottom: 0;
+}
