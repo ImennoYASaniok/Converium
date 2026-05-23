@@ -1,6 +1,7 @@
 package com.course.controllers
 
 import com.course.services.CourseService
+import com.course.services.SearchBy
 import com.course.dto.*
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -35,6 +37,17 @@ class CourseController(
     ): ResponseEntity<CourseDto> {
         val course = courseService.createCourse(dto, reqUserId)
         return ResponseEntity.status(HttpStatus.CREATED).body(CourseDto.from(course, true))
+    }
+
+    @GetMapping("/search")
+    fun searchCourses(
+        @RequestParam q: String,
+        @RequestParam(required = false) by: String?,
+        @AuthenticationPrincipal reqUserId: Long
+    ): ResponseEntity<List<CourseDto>> {
+        val searchBy = by?.let { SearchBy.valueOf(it.uppercase()) }
+        val courses = courseService.searchCourses(q, reqUserId, searchBy)
+        return ResponseEntity.ok(courses)
     }
 
     @GetMapping("/{courseId}")
