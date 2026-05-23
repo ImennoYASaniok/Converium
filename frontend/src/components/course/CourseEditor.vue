@@ -1,6 +1,5 @@
 <script>
 import { courseApi } from '../../api/course_api.js'
-import AIIcon from './AIIcon.vue'
 import JsonEditor from './JsonEditor.vue'
 import StepEditor from './StepEditor.vue'
 
@@ -28,7 +27,6 @@ export default {
 
     components: {
         JsonEditor,
-        AIIcon,
         StepEditor,
     },
 
@@ -114,7 +112,9 @@ export default {
                 step: null,
                 originPosition: { x: 0, y: 0, width: 100, height: 100 },
                 closing: false
-            }
+            },
+
+            helpPanelVisible: true
         }
     },
 
@@ -1469,10 +1469,6 @@ export default {
             </div>
         </div>
 
-
-        <div class="ai-panel">
-            <AIIcon class="ai-assistant" ref="aiRef" :is-active="isAiActive" @interaction="showAiMessage" />
-        </div>
         <div v-if="aiMessage.visible" class="ai-message-popup"
             :style="{ left: aiMessage.x + 'px', bottom: aiMessage.y + 'px' }" @click.stop>
             <div class="ai-message-content">
@@ -1487,8 +1483,14 @@ export default {
             </div>
             <div class="ai-message-tail"></div>
         </div>
-        <div class="help-panel">
-            <h4>Управление:</h4>
+        <button class="help-toggle" @click="helpPanelVisible = !helpPanelVisible" :title="helpPanelVisible ? 'Скрыть подсказки' : 'Показать подсказки'">
+            {{ helpPanelVisible ? '?' : '?' }}
+        </button>
+        <div v-if="helpPanelVisible" class="help-panel">
+            <div class="help-header">
+                <h4>Управление:</h4>
+                <button class="help-close" @click="helpPanelVisible = false" title="Скрыть">×</button>
+            </div>
             <ul>
                 <li><b>ЛКМ даблклик по холсту</b> — создание шага</li>
                 <li><b>ЛКМ + drag</b> — перемещение шага</li>
@@ -2245,24 +2247,91 @@ export default {
     cursor: not-allowed;
 }
 
-.help-panel {
+.help-toggle {
     position: fixed;
     bottom: 20px;
-    right: 420px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+    transition: all 0.2s;
+}
+
+.help-toggle:hover {
+    background: #1976D2;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+.help-panel {
+    position: fixed;
+    bottom: 66px;
+    right: 20px;
     background: white;
     padding: 16px 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     font-size: 12px;
     color: #666;
     max-width: 260px;
     z-index: 50;
+    animation: helpAppear 0.2s ease;
 }
 
-.help-panel h4 {
-    margin: 0 0 10px 0;
+@keyframes helpAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.help-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.help-header h4 {
+    margin: 0;
     color: #333;
     font-size: 13px;
+}
+
+.help-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.help-close:hover {
+    color: #333;
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .help-panel ul {

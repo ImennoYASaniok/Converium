@@ -26,5 +26,5 @@ export default {
   <main>
     <RouterView />
   </main>
-  <AppFooter />
+  <AppFooter v-if="$route.name !== 'CourseView'" />
 </template>

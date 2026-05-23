@@ -87,9 +87,21 @@ export default {
   line-height: 1.5;
 }
 .json-editor-container ::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  width: 8px;
+  height: 8px;
+}
+
+.json-editor-container ::-webkit-scrollbar-track {
+  background: #252525;
+}
+
+.json-editor-container ::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.json-editor-container ::-webkit-scrollbar-thumb:hover {
+  background: #777;
 }
 
 .line-numbers {
@@ -106,9 +118,6 @@ export default {
 
 }
 
-.line-numbers::-webkit-scrollbar, .input-layer::-webkit-scrollbar{
-  display: none;
-}
 
 .line-number {
   padding: 0 10px;
@@ -118,7 +127,7 @@ export default {
 .editor-content {
   flex: 1;
   position: relative;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .prism-layer,

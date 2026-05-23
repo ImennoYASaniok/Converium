@@ -202,8 +202,10 @@ export default {
             <p class="profile-item"><strong>Логин:</strong> {{ profile.login }}</p>
             <p class="profile-item"><strong>Email:</strong> {{ profile.email }}</p>
           </div>
-          <p class="profile-item"><strong>Имя:</strong> {{ profile.name }}</p>
-          <p class="profile-item"><strong>Фамилия:</strong> {{ profile.surname }}</p>
+          <div class="row-container">
+            <p class="profile-item"><strong>Имя:</strong> {{ profile.name }}</p>
+            <p class="profile-item"><strong>Фамилия:</strong> {{ profile.surname }}</p>
+          </div>
           <p class="profile-item"><strong>Описание:</strong> {{ profile.description }}</p>
         </div>
       </div>

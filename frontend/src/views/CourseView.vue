@@ -167,7 +167,7 @@ export default {
   left: 0;
   right: 0;
   top: var(--site-header-height, 64px);
-  bottom: var(--site-footer-height, 72px);
+  bottom: 0;
   display: flex;
   gap: 1rem;
 }
